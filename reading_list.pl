@@ -30,7 +30,7 @@ use Scalar::Util 'looks_like_number';
 # This must be a csv file
 use constant DB_FILE_NAME => 'reading_list.csv';
 
-# Exactly one argument is needed. If not stop the program.
+# Exactly one or two argument are needed. If not stop the program.
 if ( @ARGV > 2 ) {
     die "Too many arguments. Only one argument required";
 }
@@ -42,6 +42,7 @@ GetOptions(
     "Show"     => \&handler_show,
     "Add"      => \&handler_add,
     "Delete"   => \&handler_delete,
+    "Edit"     => \&handler_edit,
     "Import=s" => \&handler_import_goodreads
 ) or die "Error in command line arguments";
 
@@ -61,24 +62,21 @@ sub handler_add {
 
     my $table = Data::Table::fromFile(DB_FILE_NAME);
 
-    print "Author: ";
-    my $author = <STDIN>;
-    chomp $author;
-
     print "Title: ";
     my $title = <STDIN>;
     chomp $title;
 
-    print "Isbn: ";
-    my $isbn = <STDIN>;
-    chomp $isbn;
+    print "Author: ";
+    my $author = <STDIN>;
+    chomp $author;
 
-    while ( not check_isbn($isbn) ) {
-        say "You entered an invalid ISBN number.";
+    my $isbn;
+    do {
+        say "You entered an invalid ISBN number." if defined $isbn;
         print "Isbn: ";
         $isbn = <STDIN>;
         chomp $isbn;
-    }
+    } while ( not check_isbn($isbn) );
 
     print "Publisher: ";
     my $publisher = <STDIN>;
@@ -88,9 +86,13 @@ sub handler_add {
     my $pub_year = <STDIN>;
     chomp $pub_year;
 
-    print "Reading date: ";
-    my $date_read = <STDIN>;
-    chomp $date_read;
+    my $date_read;
+    do {
+        say "You entered an invalid date." if defined $date_read;
+        print "Reading date: ";
+        $date_read = <STDIN>;
+        chomp $date_read;
+    } while ( not check_date($date_read) );
 
     say 'Do you want to add the following book? (y/n)';
 
@@ -150,6 +152,11 @@ sub handler_delete {
         say "Book was not deleted";
     }
 }    ## --- end sub handler_delete
+
+sub handler_edit {
+    my ($par1) = @_;
+    return;
+}    ## --- end sub handler_edit
 
 sub handler_import_goodreads {
     my ( $opt_name, $input_filename ) = @_;
@@ -277,7 +284,6 @@ sub show_table {
         printf "%10.10s\t", $csv->elm( $i, "Date Read" );       # Date read
         print "\n";
     }
-    return;
 }    ## --- end sub show_table
 
 #===  FUNCTION  ================================================================
@@ -312,6 +318,14 @@ sub check_isbn {
     return 1 if ( 10 - ( $sum % 10 ) ) == $check;
     return 0;
 }    ## --- end sub check_isbn
+
+sub check_date {
+    my ($date) = @_;
+    my ( $year, $month, $day ) = $date =~ /(\d\d\d\d)\/(\d\d)\/(\d\d)/;
+
+    return 1 if $year and $month and $day and $month <= 12 and $day <= 31;
+    return 0;
+}    ## --- end sub check_date
 
 sub print_to_file {
     my ( $output_filename, $output ) = @_;
