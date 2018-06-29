@@ -121,8 +121,34 @@ sub handler_add {
 }    ## --- end sub handler_add
 
 sub handler_delete {
-    my ($par1) = @_;
-    return;
+    my $table = Data::Table::fromFile(DB_FILE_NAME);
+
+    say "Which book do you want to delete? (Insert id)";
+    my $row = <STDIN>;
+    chomp $row;
+    $row--;    # Row number to index.
+
+    # TODO: Check if valid input
+
+    printf "%20.20s\t", $table->elm( $row, "Title" );           # Title
+    printf "%20.20s\t", $table->elm( $row, "Author" );          # Author
+    printf "%13.13s\t", $table->elm( $row, "ISBN13" );          # ISBN
+    printf "%20.20s\t", $table->elm( $row, "Publisher" );       # Publisher
+    printf "%4.4s\t",   $table->elm( $row, "Year Published" );  # Year published
+    printf "%10.10s\t", $table->elm( $row, "Date Read" );       # Date read
+    print "\n";
+
+    say "Are you sure you want to delete this book? (y/n)";
+
+    my $validation = <STDIN>;
+    chomp $validation;
+
+    if ( $validation eq 'y' ) {
+        print_to_file( DB_FILE_NAME, delete_book( $table, $row )->csv );
+    }
+    else {
+        say "Book was not deleted";
+    }
 }    ## --- end sub handler_delete
 
 sub handler_import_goodreads {
@@ -207,11 +233,27 @@ sub add_book {
             "Publisher"      => $publisher,
             "Year Published" => $pub_year,
             "Date Read"      => $date_read
-        }
+        },
+        0
     );
 
     return $csv;
 }    ## --- end sub add_book
+
+#===  FUNCTION  ================================================================
+#         NAME: delete_book
+#      PURPOSE: Delete book (row), given with row number from existing csv. The
+#      			row number is the row index plus 1.
+#   PARAMETERS: Data::Table object, row number to delete.
+#      RETURNS: Data::Table object
+#===============================================================================
+sub delete_book {
+    my ( $csv, $row ) = @_;
+
+    $csv->delRow($row);
+
+    return $csv;
+}    ## --- end sub delete_book
 
 #===  FUNCTION  ================================================================
 #         NAME: show_table
