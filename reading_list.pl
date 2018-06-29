@@ -25,6 +25,7 @@ use feature 'say';
 
 use Data::Table;
 use Getopt::Long;
+use Scalar::Util 'looks_like_number';
 
 # This must be a csv file
 use constant DB_FILE_NAME => 'reading_list.csv';
@@ -44,12 +45,6 @@ GetOptions(
     "Import=s" => \&handler_import_goodreads
 ) or die "Error in command line arguments";
 
-# TODO
-# * Add numbering to show_table to make delete possible
-# * Check that only one argument is given at any time
-
-# show_table($csv);
-
 #say $_ for $csv->header();
 
 sub handler_show {
@@ -63,40 +58,66 @@ sub handler_add {
 
     # TODO:
     # * check input
-    # * Add database
 
-    my $csv;
+    my $table = Data::Table::fromFile(DB_FILE_NAME);
 
-    print "Author:";
+    print "Author: ";
     my $author = <STDIN>;
     chomp $author;
 
-    print "Title:";
+    print "Title: ";
     my $title = <STDIN>;
     chomp $title;
 
-    print "Isbn:";
+    print "Isbn: ";
     my $isbn = <STDIN>;
     chomp $isbn;
 
-    print "Publisher::";
+    while ( not check_isbn($isbn) ) {
+        say "You entered an invalid ISBN number.";
+        print "Isbn: ";
+        $isbn = <STDIN>;
+        chomp $isbn;
+    }
+
+    print "Publisher: ";
     my $publisher = <STDIN>;
     chomp $publisher;
 
-    print say "Publication Year:";
+    print "Publication Year: ";
     my $pub_year = <STDIN>;
     chomp $pub_year;
 
-    print "Reading date::";
+    print "Reading date: ";
     my $date_read = <STDIN>;
     chomp $date_read;
 
-    print_to_file(
-        DB_FILE_NAME,
-        add_book(
-            $csv, $title, $author, $isbn, $publisher, $pub_year, $date_read
-        )
-    );
+    say 'Do you want to add the following book? (y/n)';
+
+    printf "%20.20s\t", $title;        # Title
+    printf "%20.20s\t", $author;       # Author
+    printf "%13.13s\t", $isbn;         # ISBN
+    printf "%20.20s\t", $publisher;    # Publisher
+    printf "%4.4s\t",   $pub_year;     # Year published
+    printf "%10.10s\t", $date_read;    # Date read
+    print "\n";
+
+    my $validation = <STDIN>;
+    chomp $validation;
+
+    if ( $validation eq 'y' ) {
+        print_to_file(
+            DB_FILE_NAME,
+            add_book(
+                $table,     $title,    $author, $isbn,
+                $publisher, $pub_year, $date_read
+            )->csv
+        );
+    }
+    else {
+        say "Book was not added";
+    }
+
 }    ## --- end sub handler_add
 
 sub handler_delete {
@@ -174,7 +195,6 @@ sub import_goodreads_csv {
 #      			existing csv.
 #   PARAMETERS: Data::Table object, 6 strings
 #      RETURNS: Data::Table object
-#         TODO: add error checking
 #===============================================================================
 sub add_book {
     my ( $csv, $title, $author, $isbn, $publisher, $pub_year, $date_read ) = @_;
@@ -228,6 +248,8 @@ sub show_table {
 sub check_isbn {
     my ($isbn) = @_;
 
+    return 0 unless looks_like_number($isbn);
+
     # Calculate checksum
     my @isbn = split '', $isbn;
     my $sum = 0;
@@ -260,4 +282,3 @@ sub print_to_file {
     close $fh
       or warn "$0 : failed to close output file '$output_filename' : $!\n";
 }    ## --- end sub print_to_file
-
