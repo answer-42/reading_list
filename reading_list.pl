@@ -295,11 +295,15 @@ sub show_table {
 #===============================================================================
 sub check_isbn {
     my ($isbn) = @_;
+    my @isbn = split '', $isbn;
 
     return 0 unless looks_like_number($isbn);
 
+    # Retrieve checksum and check length (13 digits)
+    return 0
+      unless my ($check) = $isbn =~ /^\d{12}(\d)$/;
+
     # Calculate checksum
-    my @isbn = split '', $isbn;
     my $sum = 0;
     for ( 1 .. 12 ) {
         if ( $_ % 2 == 1 ) {
@@ -309,10 +313,6 @@ sub check_isbn {
             $sum += 3 * $isbn[ $_ - 1 ];
         }
     }
-
-    # Retrieve checksum and check length (13 digits)
-    return 0
-      unless my ($check) = $isbn =~ /^\d{12}(\d)$/;
 
     # Check if checksum corresponds with calculated checksum
     return 1 if ( 10 - ( $sum % 10 ) ) == $check;
