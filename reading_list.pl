@@ -67,6 +67,7 @@ sub handler_add {
     my $table = Data::Table::fromFile(DB_FILE_NAME);
 
     my $term = new Term::ReadLine "Add";
+    $term->ornaments('0');
 
     my $title  = $term->readline("Title: ");
     my $author = $term->readline("Author: ");
@@ -116,6 +117,7 @@ sub handler_delete {
     my $table = Data::Table::fromFile(DB_FILE_NAME);
 
     my $term = new Term::ReadLine "Delete";
+    $term->ornaments('0');
 
     my $row_index =
       $term->readline("Which book do you want to delete? (Insert id) ");
@@ -139,6 +141,7 @@ sub handler_edit {
     my $table = Data::Table::fromFile(DB_FILE_NAME);
 
     my $term = new Term::ReadLine "Edit";
+    $term->ornaments('0');
 
     my $row = $term->readline("Which book do you want to edit? (Insert id) ");
     $row--;    # Row number to index.
