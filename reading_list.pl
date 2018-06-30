@@ -130,19 +130,12 @@ sub handler_delete {
     my $table = Data::Table::fromFile(DB_FILE_NAME);
 
     say "Which book do you want to delete? (Insert id)";
-    my $row = <STDIN>;
-    chomp $row;
-    $row--;    # Row number to index.
+    my $row_index = <STDIN>;
+    chomp $row_index;
+    $row_index--;    # Row number to index.
 
     # TODO: Check if valid input
-
-    printf "%20.20s\t", $table->elm( $row, "Title" );           # Title
-    printf "%20.20s\t", $table->elm( $row, "Author" );          # Author
-    printf "%13.13s\t", $table->elm( $row, "ISBN13" );          # ISBN
-    printf "%20.20s\t", $table->elm( $row, "Publisher" );       # Publisher
-    printf "%4.4s\t",   $table->elm( $row, "Year Published" );  # Year published
-    printf "%10.10s\t", $table->elm( $row, "Date Read" );       # Date read
-    print "\n";
+    print_row( $table, $row_index );
 
     say "Are you sure you want to delete this book? (y/n)";
 
@@ -150,7 +143,7 @@ sub handler_delete {
     chomp $validation;
 
     if ( $validation eq 'y' ) {
-        print_to_file( DB_FILE_NAME, delete_book( $table, $row )->csv );
+        print_to_file( DB_FILE_NAME, delete_book( $table, $row_index )->csv );
     }
     else {
         say "Book was not deleted";
@@ -167,14 +160,9 @@ sub handler_edit {
 
     my $input;
     do {
-        printf "%20.20s[1]\t", $table->elm( $row, "Title" );        # Title
-        printf "%20.20s[2]\t", $table->elm( $row, "Author" );       # Author
-        printf "%13.13s[3]\t", $table->elm( $row, "ISBN13" );       # ISBN
-        printf "%20.20s[4]\t", $table->elm( $row, "Publisher" );    # Publisher
-        printf "%4.4s[5}\t",
-          $table->elm( $row, "Year Published" );    # Year published
-        printf "%10.10s[6]\t", $table->elm( $row, "Date Read" );    # Date read
-        print "\n\n";
+        printf "%10.10s\t%20.20s\t%20.20s\t%13.13s\t%20.20s\t%4.4s\t%10.10s\n",
+          '', '[1]', '[2]', '[3]', '[4]', '[5]', '[6]';
+        print_row( $table, $row );
 
         say "Which field (1-6) do you want to change? To stop editing press q.";
 
@@ -229,10 +217,7 @@ sub handler_edit {
                 chomp $validation;
 
                 if ( $validation eq 'y' ) {
-
-                    # TODO: create edit_book function
-                    print_to_file( DB_FILE_NAME,
-                        $table->csv );
+                    print_to_file( DB_FILE_NAME, $table->csv );
                 }
                 else {
                     say "Changes were not saved.";
@@ -266,6 +251,7 @@ sub handler_import_goodreads {
 sub import_goodreads_csv {
     my ($csv) = @_;
 
+    # Import only books from the read shelf
     $csv = $csv->match_pattern_hash('$_{"Exclusive Shelf"} eq "read"');
 
     $csv->delCols(
@@ -360,19 +346,12 @@ sub delete_book {
 #         TODO: Add $csv->header()>
 #===============================================================================
 sub show_table {
-    my ($csv) = @_;
+    my ($table) = @_;
 
-    foreach my $i ( 0 .. $csv->lastRow ) {
+    foreach my $i ( 0 .. $table->lastRow ) {
+        print_row( $table, $i );
 
         # Unicode problem: wide character
-        printf "%10.10s\t", $i + 1;                             # Counter
-        printf "%20.20s\t", $csv->elm( $i, "Title" );           # Title
-        printf "%20.20s\t", $csv->elm( $i, "Author" );          # Author
-        printf "%13.13s\t", $csv->elm( $i, "ISBN13" );          # ISBN
-        printf "%20.20s\t", $csv->elm( $i, "Publisher" );       # Publisher
-        printf "%4.4s\t",   $csv->elm( $i, "Year Published" );  # Year published
-        printf "%10.10s\t", $csv->elm( $i, "Date Read" );       # Date read
-        print "\n";
     }
 }    ## --- end sub show_table
 
@@ -408,6 +387,21 @@ sub check_isbn {
     return 1 if ( 10 - ( $sum % 10 ) ) == $check;
     return 0;
 }    ## --- end sub check_isbn
+
+sub print_row {
+    my ( $table, $row_index ) = @_;
+
+    printf "%10.10s\t", $row_index + 1;                            # Counter
+    printf "%20.20s\t", $table->elm( $row_index, "Title" );        # Title
+    printf "%20.20s\t", $table->elm( $row_index, "Author" );       # Author
+    printf "%13.13s\t", $table->elm( $row_index, "ISBN13" );       # ISBN
+    printf "%20.20s\t", $table->elm( $row_index, "Publisher" );    # Publisher
+    printf "%4.4s\t",
+      $table->elm( $row_index, "Year Published" );    # Year published
+    printf "%10.10s\t", $table->elm( $row_index, "Date Read" );    # Date read
+    print "\n";
+
+}    ## --- end sub print_row
 
 sub check_date {
     my ($date) = @_;
