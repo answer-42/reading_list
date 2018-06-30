@@ -55,8 +55,11 @@ GetOptions(
 sub handler_show {
     my $table = Data::Table::fromFile(DB_FILE_NAME);
 
-    show_table($table);
+    foreach my $i ( 0 .. $table->lastRow ) {
+        print_row( $table, $i );
 
+        # Unicode problem: wide character
+    }
 }    ## --- end sub handler_show
 
 sub handler_add {
@@ -99,13 +102,19 @@ sub handler_add {
       $term->readline('Do you want to add this following book? (y/n)');
 
     if ( $validation eq 'y' ) {
-        print_to_file(
-            DB_FILE_NAME,
-            add_book(
-                $table,     $title,    $author, $isbn,
-                $publisher, $pub_year, $date_read
-            )->csv
+        $table->addRow(
+            {
+                "Title"          => $title,
+                "Author"         => $author,
+                "ISBN13"         => $isbn,
+                "Publisher"      => $publisher,
+                "Year Published" => $pub_year,
+                "Date Read"      => $date_read
+            },
+            0
         );
+
+        print_to_file( DB_FILE_NAME, $table->csv );
     }
     else {
         say "Book was not added";
@@ -129,8 +138,10 @@ sub handler_delete {
     my $validation =
       $term->readline("Are you sure you want to delete this book? (y/n) ");
 
+    $table->delRow($row_index);
+
     if ( $validation eq 'y' ) {
-        print_to_file( DB_FILE_NAME, delete_book( $table, $row_index )->csv );
+        print_to_file( DB_FILE_NAME, $table->csv );
     }
     else {
         say "Book was not deleted";
@@ -219,25 +230,10 @@ sub handler_import_goodreads {
     my ( $opt_name, $input_filename ) = @_;
     my $table = Data::Table::fromFile($input_filename);
 
-    # TODO: Ask if you want to overwrite existing file.
-    print_to_file( DB_FILE_NAME, import_goodreads_csv($table)->csv );
-}    ## --- end sub handler_import_goodreads
-
-#===  FUNCTION  ================================================================
-#         NAME: import_goodreads_csv
-#      PURPOSE: Using a csv file from Goodreads to create a csv file with the
-#      			following collumns: title, author, ISBN13,  publisher,
-#      			year published, date read
-#   PARAMETERS: Data::Table object from goodreads csv file
-#      RETURNS: Data::Table object
-#===============================================================================
-sub import_goodreads_csv {
-    my ($csv) = @_;
-
     # Import only books from the read shelf
-    $csv = $csv->match_pattern_hash('$_{"Exclusive Shelf"} eq "read"');
+    $table = $table->match_pattern_hash('$_{"Exclusive Shelf"} eq "read"');
 
-    $csv->delCols(
+    $table->delCols(
         [
             "Book Id",
             "Author l-f",
@@ -268,75 +264,19 @@ sub import_goodreads_csv {
     );
 
     # Clean ISBN
-    foreach my $i ( 0 .. $csv->lastRow ) {
+    foreach my $i ( 0 .. $table->lastRow ) {
 
         # Regex: retrieves first consecutive number, eg. '="1234"' -> '1234'
-        my ($isbn) = $csv->elm( $i, "ISBN13" ) =~ /(\d+)/;
+        my ($isbn) = $table->elm( $i, "ISBN13" ) =~ /(\d+)/;
 
         # Change ISBN to number we got with the regex, or to empty string if no
         # ISBN was given.
-        $csv->setElm( $i, "ISBN13", $isbn ? $isbn : "" );
+        $table->setElm( $i, "ISBN13", $isbn ? $isbn : "" );
     }
 
-    return $csv;
-}    ## --- end sub import_goodreads_csv
-
-#===  FUNCTION  ================================================================
-#         NAME: add_book
-#      PURPOSE: Add title, author, isbn, publisher, year published, date read to
-#      			existing csv.
-#   PARAMETERS: Data::Table object, 6 strings
-#      RETURNS: Data::Table object
-#===============================================================================
-sub add_book {
-    my ( $csv, $title, $author, $isbn, $publisher, $pub_year, $date_read ) = @_;
-
-    $csv->addRow(
-        {
-            "Title"          => $title,
-            "Author"         => $author,
-            "ISBN13"         => $isbn,
-            "Publisher"      => $publisher,
-            "Year Published" => $pub_year,
-            "Date Read"      => $date_read
-        },
-        0
-    );
-
-    return $csv;
-}    ## --- end sub add_book
-
-#===  FUNCTION  ================================================================
-#         NAME: delete_book
-#      PURPOSE: Delete book (row), given with row number from existing csv. The
-#      			row number is the row index plus 1.
-#   PARAMETERS: Data::Table object, row number to delete.
-#      RETURNS: Data::Table object
-#===============================================================================
-sub delete_book {
-    my ( $csv, $row ) = @_;
-
-    $csv->delRow($row);
-
-    return $csv;
-}    ## --- end sub delete_book
-
-#===  FUNCTION  ================================================================
-#         NAME: show_table
-#      PURPOSE: Print the csv table
-#   PARAMETERS: Data::Table object
-#      RETURNS: undef
-#         TODO: Add $csv->header()>
-#===============================================================================
-sub show_table {
-    my ($table) = @_;
-
-    foreach my $i ( 0 .. $table->lastRow ) {
-        print_row( $table, $i );
-
-        # Unicode problem: wide character
-    }
-}    ## --- end sub show_table
+    # TODO: Ask if you want to overwrite existing file.
+    print_to_file( DB_FILE_NAME, import_goodreads_csv($table)->csv );
+}    ## --- end sub handler_import_goodreads
 
 #===  FUNCTION  ================================================================
 #         NAME: check_isbn
