@@ -66,39 +66,25 @@ sub handler_add {
 
     my $table = Data::Table::fromFile(DB_FILE_NAME);
 
-    print "Title: ";
-    my $title = <STDIN>;
-    chomp $title;
+    my $term = new Term::ReadLine "Add";
 
-    print "Author: ";
-    my $author = <STDIN>;
-    chomp $author;
+    my $title  = $term->readline("Title: ");
+    my $author = $term->readline("Author: ");
 
     my $isbn;
     do {
         say "You entered an invalid ISBN number." if defined $isbn;
-        print "Isbn: ";
-        $isbn = <STDIN>;
-        chomp $isbn;
+        $isbn = $term->readline("Isbn: ");
     } while ( not check_isbn($isbn) );
 
-    print "Publisher: ";
-    my $publisher = <STDIN>;
-    chomp $publisher;
-
-    print "Publication Year: ";
-    my $pub_year = <STDIN>;
-    chomp $pub_year;
+    my $publisher = $term->readline("Publisher: ");
+    my $pub_year  = $term->readline("Publication Year: ");
 
     my $date_read;
     do {
         say "You entered an invalid date." if defined $date_read;
-        print "Reading date: ";
-        $date_read = <STDIN>;
-        chomp $date_read;
+        $date_read = $term->readline("Reading date: ");
     } while ( not check_date($date_read) );
-
-    say 'Do you want to add the following book? (y/n)';
 
     printf "%20.20s\t", $title;        # Title
     printf "%20.20s\t", $author;       # Author
@@ -108,8 +94,8 @@ sub handler_add {
     printf "%10.10s\t", $date_read;    # Date read
     print "\n";
 
-    my $validation = <STDIN>;
-    chomp $validation;
+    my $validation =
+      $term->readline('Do you want to add this following book? (y/n)');
 
     if ( $validation eq 'y' ) {
         print_to_file(
@@ -129,18 +115,17 @@ sub handler_add {
 sub handler_delete {
     my $table = Data::Table::fromFile(DB_FILE_NAME);
 
-    say "Which book do you want to delete? (Insert id)";
-    my $row_index = <STDIN>;
-    chomp $row_index;
+    my $term = new Term::ReadLine "Delete";
+
+    my $row_index =
+      $term->readline("Which book do you want to delete? (Insert id) ");
     $row_index--;    # Row number to index.
 
     # TODO: Check if valid input
     print_row( $table, $row_index );
 
-    say "Are you sure you want to delete this book? (y/n)";
-
-    my $validation = <STDIN>;
-    chomp $validation;
+    my $validation =
+      $term->readline("Are you sure you want to delete this book? (y/n) ");
 
     if ( $validation eq 'y' ) {
         print_to_file( DB_FILE_NAME, delete_book( $table, $row_index )->csv );
@@ -153,9 +138,9 @@ sub handler_delete {
 sub handler_edit {
     my $table = Data::Table::fromFile(DB_FILE_NAME);
 
-    say "Which book do you want to edit? (Insert id)";
-    my $row = <STDIN>;
-    chomp $row;
+    my $term = new Term::ReadLine "Edit";
+
+    my $row = $term->readline("Which book do you want to edit? (Insert id) ");
     $row--;    # Row number to index.
 
     my $input;
@@ -164,12 +149,9 @@ sub handler_edit {
           '', '[1]', '[2]', '[3]', '[4]', '[5]', '[6]';
         print_row( $table, $row );
 
-        say "Which field (1-6) do you want to change? To stop editing press q.";
-
-        $input = <STDIN>;
-        chomp $input;
-
-        my $term = new Term::ReadLine "Edit";
+        my $input = $term->readline(
+            "Which field (1-6) do you want to change? To stop editing press q. "
+        );
 
         given ($input) {
             when ('1') {
@@ -211,10 +193,8 @@ sub handler_edit {
                 $table->setElm( $row, "Date Read", $new_date_read );
             }
             when ('q') {
-                say "Are you sure you want to save these changes? (y/n)";
-
-                my $validation = <STDIN>;
-                chomp $validation;
+                my $validation = $term->readline(
+                    "Are you sure you want to save these changes? (y/n) ");
 
                 if ( $validation eq 'y' ) {
                     print_to_file( DB_FILE_NAME, $table->csv );
