@@ -21,11 +21,15 @@
 use strict;
 use warnings;
 use utf8;
-use feature 'say';
+use feature qw(say switch);
+no warnings "experimental::smartmatch";
 
 use Data::Table;
 use Getopt::Long;
 use Scalar::Util 'looks_like_number';
+use Term::ReadLine;
+
+# TODO: Add header to all output
 
 # This must be a csv file
 use constant DB_FILE_NAME => 'reading_list.csv';
@@ -154,14 +158,100 @@ sub handler_delete {
 }    ## --- end sub handler_delete
 
 sub handler_edit {
-    my ($par1) = @_;
-    return;
+    my $table = Data::Table::fromFile(DB_FILE_NAME);
+
+    say "Which book do you want to edit? (Insert id)";
+    my $row = <STDIN>;
+    chomp $row;
+    $row--;    # Row number to index.
+
+    my $input;
+    do {
+        printf "%20.20s[1]\t", $table->elm( $row, "Title" );        # Title
+        printf "%20.20s[2]\t", $table->elm( $row, "Author" );       # Author
+        printf "%13.13s[3]\t", $table->elm( $row, "ISBN13" );       # ISBN
+        printf "%20.20s[4]\t", $table->elm( $row, "Publisher" );    # Publisher
+        printf "%4.4s[5}\t",
+          $table->elm( $row, "Year Published" );    # Year published
+        printf "%10.10s[6]\t", $table->elm( $row, "Date Read" );    # Date read
+        print "\n\n";
+
+        say "Which field (1-6) do you want to change? To stop editing press q.";
+
+        $input = <STDIN>;
+        chomp $input;
+
+        my $term = new Term::ReadLine "Edit";
+
+        given ($input) {
+            when ('1') {
+                my $new_title =
+                  $term->readline( "Edit title: ",
+                    $table->elm( $row, "Title" ) );
+                $table->setElm( $row, "Title", $new_title );
+            }
+            when ('2') {
+                my $new_author = $term->readline( "Edit Author: ",
+                    $table->elm( $row, "Author" ) );
+                $table->setElm( $row, "Author", $new_author );
+            }
+            when ('3') {
+                my $new_isbn =
+                  $term->readline( "Edit Isbn: ",
+                    $table->elm( $row, "ISBN13" ) );
+
+                if ( check($new_isbn) ) {
+                    $table->setElm( $row, "ISBN13", $new_isbn );
+                }
+                else {
+                    say "Not a valid Isbn number.";
+                }
+            }
+            when ('4') {
+                my $new_publisher = $term->readline( "Edit Publisher: ",
+                    $table->elm( $row, "Publisher" ) );
+                $table->setElm( $row, "Publisher", $new_publisher );
+            }
+            when ('5') {
+                my $new_pub_year = $term->readline( "Edit publication year: ",
+                    $table->elm( $row, "Year Published" ) );
+                $table->setElm( $row, "Year Published", $new_pub_year );
+            }
+            when ('6') {
+                my $new_date_read = $term->readline( "Edit reading date: ",
+                    $table->elm( $row, "D" ) );
+                $table->setElm( $row, "Date Read", $new_date_read );
+            }
+            when ('q') {
+                say "Are you sure you want to save these changes? (y/n)";
+
+                my $validation = <STDIN>;
+                chomp $validation;
+
+                if ( $validation eq 'y' ) {
+
+                    # TODO: create edit_book function
+                    print_to_file( DB_FILE_NAME,
+                        $table->csv );
+                }
+                else {
+                    say "Changes were not saved.";
+                }
+
+                exit;
+            }
+            default {
+                say "No valid input";
+            }
+        }
+    } while (1);
 }    ## --- end sub handler_edit
 
 sub handler_import_goodreads {
     my ( $opt_name, $input_filename ) = @_;
     my $table = Data::Table::fromFile($input_filename);
 
+    # TODO: Ask if you want to overwrite existing file.
     print_to_file( DB_FILE_NAME, import_goodreads_csv($table)->csv );
 }    ## --- end sub handler_import_goodreads
 
