@@ -29,8 +29,6 @@ use Getopt::Long;
 use Scalar::Util 'looks_like_number';
 use Term::ReadLine;
 
-# TODO: Add header to all output
-
 # This must be a csv file
 use constant DB_FILE_NAME => 'reading_list.csv';
 
@@ -63,10 +61,6 @@ sub handler_show {
 }    ## --- end sub handler_show
 
 sub handler_add {
-
-    # TODO:
-    # * check input
-
     my $table = Data::Table::fromFile(DB_FILE_NAME);
 
     my $term = new Term::ReadLine "Add";
@@ -132,7 +126,6 @@ sub handler_delete {
       $term->readline("Which book do you want to delete? (Insert id) ");
     $row_index--;    # Row number to index.
 
-    # TODO: Check if valid input
     print_row( $table, $row_index );
 
     my $validation =
@@ -169,22 +162,17 @@ sub handler_edit {
 
         given ($input) {
             when ('1') {
-                my $new_title =
-                  $term->readline( "Edit title: ",
-                    $table->elm( $row, "Title" ) );
-                $table->setElm( $row, "Title", $new_title );
+                $table = change_field( $term, $table, $row, "Title" );
             }
             when ('2') {
-                my $new_author = $term->readline( "Edit Author: ",
-                    $table->elm( $row, "Author" ) );
-                $table->setElm( $row, "Author", $new_author );
+                $table = change_field( $term, $table, $row, "Author" );
             }
             when ('3') {
                 my $new_isbn =
                   $term->readline( "Edit Isbn: ",
                     $table->elm( $row, "ISBN13" ) );
 
-                if ( check($new_isbn) ) {
+                if ( check_isbn($new_isbn) ) {
                     $table->setElm( $row, "ISBN13", $new_isbn );
                 }
                 else {
@@ -192,19 +180,21 @@ sub handler_edit {
                 }
             }
             when ('4') {
-                my $new_publisher = $term->readline( "Edit Publisher: ",
-                    $table->elm( $row, "Publisher" ) );
-                $table->setElm( $row, "Publisher", $new_publisher );
+                $table = change_field( $term, $table, $row, "Publisher" );
             }
             when ('5') {
-                my $new_pub_year = $term->readline( "Edit publication year: ",
-                    $table->elm( $row, "Year Published" ) );
-                $table->setElm( $row, "Year Published", $new_pub_year );
+                $table = change_field( $term, $table, $row, "Year Published" );
             }
             when ('6') {
                 my $new_date_read = $term->readline( "Edit reading date: ",
-                    $table->elm( $row, "D" ) );
-                $table->setElm( $row, "Date Read", $new_date_read );
+                    $table->elm( $row, "Date Read" ) );
+
+                if ( check_date($new_date_read) ) {
+                    $table->setElm( $row, "Date Read", $new_date_read );
+                }
+                else {
+                    say "Not a valid date.";
+                }
             }
             when ('q') {
                 my $validation = $term->readline(
@@ -274,21 +264,37 @@ sub handler_import_goodreads {
         $table->setElm( $i, "ISBN13", $isbn ? $isbn : "" );
     }
 
-    # TODO: Ask if you want to overwrite existing file.
-    print_to_file( DB_FILE_NAME, import_goodreads_csv($table)->csv );
+    if ( -f DB_FILE_NAME ) {
+        my $term = new Term::ReadLine "Import";
+        $term->ornaments('0');
+
+        my $validation = $term->readline(
+            "File already exists. Do you want to overwrite it? (y/n)");
+
+        given ($validation) {
+            when ('y') {
+                print_to_file( DB_FILE_NAME,
+                    import_goodreads_csv($table)->csv );
+            }
+            default { say "File was not saved." }
+        }
+    }
+    else {
+        print_to_file( DB_FILE_NAME, import_goodreads_csv($table)->csv );
+    }
 }    ## --- end sub handler_import_goodreads
 
 #===  FUNCTION  ================================================================
 #         NAME: check_isbn
-#      PURPOSE: Checks if given number is a valid ISBN13 number.
+#      PURPOSE: Checks if given number is a valid ISBN13 number or '-'.
 #   PARAMETERS: isbn (integer)
 #      RETURNS: boolean
-#         TODO: More check possible.
 #===============================================================================
 sub check_isbn {
     my ($isbn) = @_;
     my @isbn = split '', $isbn;
 
+    return 1 if $isbn eq '-';
     return 0 unless looks_like_number($isbn);
 
     # Retrieve checksum and check length (13 digits)
@@ -325,6 +331,16 @@ sub print_row {
     print "\n";
 
 }    ## --- end sub print_row
+
+sub change_field {
+    my ( $term, $table, $row_index, $col ) = @_;
+
+    my $new_title =
+      $term->readline( "Edit " . $col . ": ", $table->elm( $row_index, $col ) );
+    $table->setElm( $row_index, $col, $new_title );
+
+    return $table;
+}    ## --- end sub change_field
 
 sub check_date {
     my ($date) = @_;
