@@ -30,6 +30,8 @@ use Scalar::Util 'looks_like_number';
 use Term::ReadLine;
 use IO::All -utf8;
 
+binmode(STDOUT, ":encoding(UTF-8)");
+
 # This must be a csv file
 use constant DB_FILE_NAME => 'reading_list.csv';
 
