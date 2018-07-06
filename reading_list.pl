@@ -28,6 +28,7 @@ use Data::Table;
 use Getopt::Long;
 use Scalar::Util 'looks_like_number';
 use Term::ReadLine;
+use IO::All -utf8;
 
 # This must be a csv file
 use constant DB_FILE_NAME => 'reading_list.csv';
@@ -352,12 +353,6 @@ sub check_date {
 
 sub print_to_file {
     my ( $output_filename, $output ) = @_;
-
-    open my $fh, '>', $output_filename
-      or die "$0 : failed to open  output file '$output_filename' : $!\n";
-
-    print $fh $output;
-
-    close $fh
-      or warn "$0 : failed to close output file '$output_filename' : $!\n";
+	
+	io($output_filename)->print($output);
 }    ## --- end sub print_to_file
