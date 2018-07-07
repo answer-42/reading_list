@@ -30,7 +30,7 @@ use Scalar::Util 'looks_like_number';
 use Term::ReadLine;
 use IO::All -utf8;
 
-binmode(STDOUT, ":encoding(UTF-8)");
+binmode( STDOUT, ":encoding(UTF-8)" );
 
 # This must be a csv file
 use constant DB_FILE_NAME => 'reading_list.csv';
@@ -111,7 +111,7 @@ sub handler_add {
             0
         );
 
-        print_to_file( DB_FILE_NAME, $table->csv );
+        io(DB_FILE_NAME)->print( $table->csv );
     }
     else {
         say "Book was not added";
@@ -137,7 +137,7 @@ sub handler_delete {
     $table->delRow($row_index);
 
     if ( $validation eq 'y' ) {
-        print_to_file( DB_FILE_NAME, $table->csv );
+        io(DB_FILE_NAME)->print( $table->csv );
     }
     else {
         say "Book was not deleted";
@@ -276,14 +276,13 @@ sub handler_import_goodreads {
 
         given ($validation) {
             when ('y') {
-                print_to_file( DB_FILE_NAME,
-                    import_goodreads_csv($table)->csv );
+                io(DB_FILE_NAME)->print( import_goodreads_csv($table)->csv );
             }
             default { say "File was not saved." }
         }
     }
     else {
-        print_to_file( DB_FILE_NAME, import_goodreads_csv($table)->csv );
+        io(DB_FILE_NAME)->print( import_goodreads_csv($table)->csv );
     }
 }    ## --- end sub handler_import_goodreads
 
@@ -352,9 +351,3 @@ sub check_date {
     return 1 if $year and $month and $day and $month <= 12 and $day <= 31;
     return 0;
 }    ## --- end sub check_date
-
-sub print_to_file {
-    my ( $output_filename, $output ) = @_;
-	
-	io($output_filename)->print($output);
-}    ## --- end sub print_to_file
