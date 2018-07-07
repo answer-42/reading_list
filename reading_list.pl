@@ -35,14 +35,6 @@ binmode( STDOUT, ":encoding(UTF-8)" );
 # This must be a csv file
 use constant DB_FILE_NAME => 'reading_list.csv';
 
-# Exactly one or two argument are needed. If not stop the program.
-if ( @ARGV > 2 ) {
-    die "Too many arguments. Only one argument required";
-}
-elsif ( @ARGV < 1 ) {
-    die "Too few arguments. Only one argument required";
-}
-
 GetOptions(
     "Show"     => \&handler_show,
     "Add"      => \&handler_add,
@@ -66,7 +58,7 @@ sub handler_show {
 sub handler_add {
     my $table = Data::Table::fromFile(DB_FILE_NAME);
 
-    my $term = new Term::ReadLine "Add";
+    my $term = Term::ReadLine->new("Add");
     $term->ornaments('0');
 
     my $title  = $term->readline("Title: ");
@@ -122,7 +114,7 @@ sub handler_add {
 sub handler_delete {
     my $table = Data::Table::fromFile(DB_FILE_NAME);
 
-    my $term = new Term::ReadLine "Delete";
+    my $term = Term::ReadLine->new("Delete");
     $term->ornaments('0');
 
     my $row_index =
@@ -147,7 +139,7 @@ sub handler_delete {
 sub handler_edit {
     my $table = Data::Table::fromFile(DB_FILE_NAME);
 
-    my $term = new Term::ReadLine "Edit";
+    my $term = Term::ReadLine->new("Edit");
     $term->ornaments('0');
 
     my $row = $term->readline("Which book do you want to edit? (Insert id) ");
@@ -268,7 +260,7 @@ sub handler_import_goodreads {
     }
 
     if ( -f DB_FILE_NAME ) {
-        my $term = new Term::ReadLine "Import";
+        my $term = Term::ReadLine->new("Import");
         $term->ornaments('0');
 
         my $validation = $term->readline(
@@ -323,13 +315,13 @@ sub print_row {
     my ( $table, $row_index ) = @_;
 
     printf "%10.10s\t", $row_index + 1;                            # Counter
-    printf "%20.20s\t", $table->elm( $row_index, "Title" );        # Title
-    printf "%20.20s\t", $table->elm( $row_index, "Author" );       # Author
-    printf "%13.13s\t", $table->elm( $row_index, "ISBN13" );       # ISBN
-    printf "%20.20s\t", $table->elm( $row_index, "Publisher" );    # Publisher
-    printf "%4.4s\t",
+    printf "%-20.20s\t", $table->elm( $row_index, "Title" );        # Title
+    printf "%-20.20s\t", $table->elm( $row_index, "Author" );       # Author
+    printf "%-13.13s\t", $table->elm( $row_index, "ISBN13" );       # ISBN
+    printf "%-20.20s\t", $table->elm( $row_index, "Publisher" );    # Publisher
+    printf "%-4.4s\t",
       $table->elm( $row_index, "Year Published" );    # Year published
-    printf "%10.10s\t", $table->elm( $row_index, "Date Read" );    # Date read
+    printf "%-10.10s\t", $table->elm( $row_index, "Date Read" );    # Date read
     print "\n";
 
 }    ## --- end sub print_row
