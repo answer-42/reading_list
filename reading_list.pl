@@ -48,15 +48,11 @@ GetOptions(
     "Import=s"    => \&handler_import_goodreads
 ) or die "Error in command line arguments";
 
-#say $_ for $csv->header();
-
 sub handler_show {
     my $table = Data::Table::fromFile($DB_FILE_NAME);
 
     foreach my $i ( 0 .. $table->lastRow ) {
         print_row( $table, $i );
-
-        # Unicode problem: wide character
     }
 }    ## --- end sub handler_show
 
@@ -87,15 +83,12 @@ sub handler_add {
 
 sub handler_ol {
     my $table = Data::Table::fromFile($DB_FILE_NAME);
-
-    my $term = Term::ReadLine->new("OL");
+    my $ol    = API::OpenLibrary::Search->new();
+    my $term  = Term::ReadLine->new("OL");
     $term->ornaments('0');
 
     my $search_term = $term->readline("Search: ");
-    my $ol          = API::OpenLibrary::Search->new();
-
     $ol->search($search_term);
-
     if ( $ol->status_code != 200 ) {
         say "Ther is a problem with the connection. Error code: ",
           $ol->status_code;
@@ -107,7 +100,6 @@ sub handler_ol {
     }
 
     foreach my $i ( 0 .. $#{ $ol->results } ) {
-
         printf "%5.5s\t", $i + 1;
         printf "%-20.20s\t", $ol->results->[$i]->{title} // '';    # Title
         printf "%-20.20s\t",
@@ -118,10 +110,9 @@ sub handler_ol {
         print "\n";
     }
 
-    my $id = $term->readline('Which book do you want to add? ');
-    $id--;
-
-    if ( $id < 0 or $id > $#{ $ol->results } ) {
+    my $row_index = $term->readline('Which book do you want to add? ');
+    $row_index--;
+    if ( $row_index < 0 or $row_index > $#{ $ol->results } ) {
         say 'Invalid input. No book added.';
         return;
     }
@@ -133,11 +124,11 @@ sub handler_ol {
     } while ( not check_date($date_read) );
 
     add_book(
-        $ol->results->[$id]->{title}             // '',
-        $ol->results->[$id]->{author_name}->[0]  // '',
-        $ol->results->[$id]->{isbn}->[0]         // '',
-        $ol->results->[$id]->{publisher}->[0]    // '',
-        $ol->results->[$id]->{publish_year}->[0] // '',
+        $ol->results->[$row_index]->{title}             // '',
+        $ol->results->[$row_index]->{author_name}->[0]  // '',
+        $ol->results->[$row_index]->{isbn}->[0]         // '',
+        $ol->results->[$row_index]->{publisher}->[0]    // '',
+        $ol->results->[$row_index]->{publish_year}->[0] // '',
         $date_read
     );
 }    ## --- end sub handler_add
@@ -156,10 +147,8 @@ sub handler_delete {
 
     my $validation =
       $term->readline("Are you sure you want to delete this book? (y/n) ");
-
-    $table->delRow($row_index);
-
     if ( $validation eq 'y' ) {
+        $table->delRow($row_index);
         io($DB_FILE_NAME)->print( $table->csv );
     }
     else {
@@ -169,18 +158,17 @@ sub handler_delete {
 
 sub handler_edit {
     my $table = Data::Table::fromFile($DB_FILE_NAME);
-
     my $term = Term::ReadLine->new("Edit");
     $term->ornaments('0');
 
-    my $row = $term->readline("Which book do you want to edit? (Insert id) ");
-    $row--;    # Row number to index.
+    my $row_index = $term->readline("Which book do you want to edit? (Insert id) ");
+    $row_index--;    # Row number to index.
 
     my $input;
     do {
         printf "%10.10s\t%20.20s\t%20.20s\t%13.13s\t%20.20s\t%4.4s\t%10.10s\n",
           '', '[1]', '[2]', '[3]', '[4]', '[5]', '[6]';
-        print_row( $table, $row );
+        print_row( $table, $row_index );
 
         my $input = $term->readline(
             "Which field (1-6) do you want to change? To stop editing press q. "
@@ -188,35 +176,35 @@ sub handler_edit {
 
         given ($input) {
             when ('1') {
-                $table = change_field( $term, $table, $row, "Title" );
+                $table = change_field( $term, $table, $row_index, "Title" );
             }
             when ('2') {
-                $table = change_field( $term, $table, $row, "Author" );
+                $table = change_field( $term, $table, $row_index, "Author" );
             }
             when ('3') {
                 my $new_isbn =
                   $term->readline( "Edit Isbn: ",
-                    $table->elm( $row, "ISBN13" ) );
+                    $table->elm( $row_index, "ISBN13" ) );
 
                 if ( check_isbn($new_isbn) ) {
-                    $table->setElm( $row, "ISBN13", $new_isbn );
+                    $table->setElm( $row_index, "ISBN13", $new_isbn );
                 }
                 else {
                     say "Not a valid Isbn number.";
                 }
             }
             when ('4') {
-                $table = change_field( $term, $table, $row, "Publisher" );
+                $table = change_field( $term, $table, $row_index, "Publisher" );
             }
             when ('5') {
-                $table = change_field( $term, $table, $row, "Year Published" );
+                $table = change_field( $term, $table, $row_index, "Year Published" );
             }
             when ('6') {
                 my $new_date_read = $term->readline( "Edit reading date: ",
-                    $table->elm( $row, "Date Read" ) );
+                    $table->elm( $row_index, "Date Read" ) );
 
                 if ( check_date($new_date_read) ) {
-                    $table->setElm( $row, "Date Read", $new_date_read );
+                    $table->setElm( $row_index, "Date Read", $new_date_read );
                 }
                 else {
                     say "Not a valid date.";
@@ -225,7 +213,6 @@ sub handler_edit {
             when ('q') {
                 my $validation = $term->readline(
                     "Are you sure you want to save these changes? (y/n) ");
-
                 if ( $validation eq 'y' ) {
                     print_to_file( $DB_FILE_NAME, $table->csv );
                 }
@@ -233,7 +220,7 @@ sub handler_edit {
                     say "Changes were not saved.";
                 }
 
-                exit;
+                return;
             }
             default {
                 say "No valid input";
@@ -380,7 +367,6 @@ sub add_book {
     my ( $title, $author, $isbn, $publisher, $pub_year, $date_read ) = @_;
 
     my $table = Data::Table::fromFile($DB_FILE_NAME);
-
     my $term = Term::ReadLine->new("Add");
     $term->ornaments('0');
 
@@ -393,7 +379,6 @@ sub add_book {
     print "\n";
 
     my $validation = $term->readline('Do you want to add this book? (y/n)');
-
     if ( $validation eq 'y' ) {
         $table->addRow(
             {
@@ -406,7 +391,6 @@ sub add_book {
             },
             0
         );
-
         io($DB_FILE_NAME)->print( $table->csv );
     }
     else {
