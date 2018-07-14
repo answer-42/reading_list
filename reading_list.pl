@@ -379,6 +379,7 @@ sub add_book {
     my $table = Data::Table::fromFile(DB_FILE_NAME);
 
     my $term = Term::ReadLine->new("Add");
+    $term->ornaments('0');
 
     printf "%-20.20s\t", $title;        # Title
     printf "%-20.20s\t", $author;       # Author
