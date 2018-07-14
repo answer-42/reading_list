@@ -31,6 +31,7 @@ use Term::ReadLine;
 use IO::All -utf8;
 use API::OpenLibrary::Search;
 use Config::Tiny;
+use Term::ANSIColor;
 
 binmode( STDOUT, ":encoding(UTF-8)" );
 
@@ -38,6 +39,7 @@ binmode( STDOUT, ":encoding(UTF-8)" );
 my $config = Config::Tiny->read('/home/sebastian/.reading_list.ini');
 
 my $DB_FILE_NAME = $config->{all}->{csv_file};
+my $COLOR        = $config->{all}->{color};
 
 GetOptions(
     "Show"        => \&handler_show,
@@ -158,10 +160,11 @@ sub handler_delete {
 
 sub handler_edit {
     my $table = Data::Table::fromFile($DB_FILE_NAME);
-    my $term = Term::ReadLine->new("Edit");
+    my $term  = Term::ReadLine->new("Edit");
     $term->ornaments('0');
 
-    my $row_index = $term->readline("Which book do you want to edit? (Insert id) ");
+    my $row_index =
+      $term->readline("Which book do you want to edit? (Insert id) ");
     $row_index--;    # Row number to index.
 
     my $input;
@@ -197,7 +200,8 @@ sub handler_edit {
                 $table = change_field( $term, $table, $row_index, "Publisher" );
             }
             when ('5') {
-                $table = change_field( $term, $table, $row_index, "Year Published" );
+                $table =
+                  change_field( $term, $table, $row_index, "Year Published" );
             }
             when ('6') {
                 my $new_date_read = $term->readline( "Edit reading date: ",
@@ -333,8 +337,11 @@ sub print_row {
     my ( $table, $row_index ) = @_;
 
     printf "%10.10s\t",  $row_index + 1;                            # Counter
+	print color('bold red') if $COLOR;
     printf "%-20.20s\t", $table->elm( $row_index, "Title" );        # Title
+	print color('green') if $COLOR;
     printf "%-20.20s\t", $table->elm( $row_index, "Author" );       # Author
+	print color('reset') if $COLOR;
     printf "%-13.13s\t", $table->elm( $row_index, "ISBN13" );       # ISBN
     printf "%-20.20s\t", $table->elm( $row_index, "Publisher" );    # Publisher
     printf "%-4.4s\t",
@@ -367,7 +374,7 @@ sub add_book {
     my ( $title, $author, $isbn, $publisher, $pub_year, $date_read ) = @_;
 
     my $table = Data::Table::fromFile($DB_FILE_NAME);
-    my $term = Term::ReadLine->new("Add");
+    my $term  = Term::ReadLine->new("Add");
     $term->ornaments('0');
 
     printf "%-20.20s\t", $title;        # Title
