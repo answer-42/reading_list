@@ -30,11 +30,14 @@ use Scalar::Util 'looks_like_number';
 use Term::ReadLine;
 use IO::All -utf8;
 use API::OpenLibrary::Search;
+use Config::Tiny;
 
 binmode( STDOUT, ":encoding(UTF-8)" );
 
-# This must be a csv file
-use constant DB_FILE_NAME => 'reading_list.csv';
+# Read from config file. Must be placed in the same folder as the script.
+my $config = Config::Tiny->read('/home/sebastian/.reading_list.ini');
+
+my $DB_FILE_NAME = $config->{all}->{csv_file};
 
 GetOptions(
     "Show"        => \&handler_show,
@@ -48,7 +51,7 @@ GetOptions(
 #say $_ for $csv->header();
 
 sub handler_show {
-    my $table = Data::Table::fromFile(DB_FILE_NAME);
+    my $table = Data::Table::fromFile($DB_FILE_NAME);
 
     foreach my $i ( 0 .. $table->lastRow ) {
         print_row( $table, $i );
@@ -83,7 +86,7 @@ sub handler_add {
 }    ## --- end sub handler_add
 
 sub handler_ol {
-    my $table = Data::Table::fromFile(DB_FILE_NAME);
+    my $table = Data::Table::fromFile($DB_FILE_NAME);
 
     my $term = Term::ReadLine->new("OL");
     $term->ornaments('0');
@@ -140,7 +143,7 @@ sub handler_ol {
 }    ## --- end sub handler_add
 
 sub handler_delete {
-    my $table = Data::Table::fromFile(DB_FILE_NAME);
+    my $table = Data::Table::fromFile($DB_FILE_NAME);
 
     my $term = Term::ReadLine->new("Delete");
     $term->ornaments('0');
@@ -157,7 +160,7 @@ sub handler_delete {
     $table->delRow($row_index);
 
     if ( $validation eq 'y' ) {
-        io(DB_FILE_NAME)->print( $table->csv );
+        io($DB_FILE_NAME)->print( $table->csv );
     }
     else {
         say "Book was not deleted";
@@ -165,7 +168,7 @@ sub handler_delete {
 }    ## --- end sub handler_delete
 
 sub handler_edit {
-    my $table = Data::Table::fromFile(DB_FILE_NAME);
+    my $table = Data::Table::fromFile($DB_FILE_NAME);
 
     my $term = Term::ReadLine->new("Edit");
     $term->ornaments('0');
@@ -224,7 +227,7 @@ sub handler_edit {
                     "Are you sure you want to save these changes? (y/n) ");
 
                 if ( $validation eq 'y' ) {
-                    print_to_file( DB_FILE_NAME, $table->csv );
+                    print_to_file( $DB_FILE_NAME, $table->csv );
                 }
                 else {
                     say "Changes were not saved.";
@@ -287,7 +290,7 @@ sub handler_import_goodreads {
         $table->setElm( $i, "ISBN13", $isbn ? $isbn : "" );
     }
 
-    if ( -f DB_FILE_NAME ) {
+    if ( -f $DB_FILE_NAME ) {
         my $term = Term::ReadLine->new("Import");
         $term->ornaments('0');
 
@@ -296,13 +299,13 @@ sub handler_import_goodreads {
 
         given ($validation) {
             when ('y') {
-                io(DB_FILE_NAME)->print( import_goodreads_csv($table)->csv );
+                io($DB_FILE_NAME)->print( import_goodreads_csv($table)->csv );
             }
             default { say "File was not saved." }
         }
     }
     else {
-        io(DB_FILE_NAME)->print( import_goodreads_csv($table)->csv );
+        io($DB_FILE_NAME)->print( import_goodreads_csv($table)->csv );
     }
 }    ## --- end sub handler_import_goodreads
 
@@ -376,7 +379,7 @@ sub check_date {
 sub add_book {
     my ( $title, $author, $isbn, $publisher, $pub_year, $date_read ) = @_;
 
-    my $table = Data::Table::fromFile(DB_FILE_NAME);
+    my $table = Data::Table::fromFile($DB_FILE_NAME);
 
     my $term = Term::ReadLine->new("Add");
     $term->ornaments('0');
@@ -404,7 +407,7 @@ sub add_book {
             0
         );
 
-        io(DB_FILE_NAME)->print( $table->csv );
+        io($DB_FILE_NAME)->print( $table->csv );
     }
     else {
         say "Book was not added";
