@@ -28,7 +28,6 @@ use Data::Table;
 use Getopt::Long;
 use Scalar::Util 'looks_like_number';
 use Term::ReadLine;
-use Time::Piece;
 use IO::All -utf8;
 use API::OpenLibrary::Search;
 
@@ -59,8 +58,6 @@ sub handler_show {
 }    ## --- end sub handler_show
 
 sub handler_add {
-    my $table = Data::Table::fromFile(DB_FILE_NAME);
-
     my $term = Term::ReadLine->new("Add");
     $term->ornaments('0');
 
@@ -82,34 +79,7 @@ sub handler_add {
         $date_read = $term->readline("Reading date: ");
     } while ( not check_date($date_read) );
 
-    printf "%-20.20s\t", $title;        # Title
-    printf "%-20.20s\t", $author;       # Author
-    printf "%-13.13s\t", $isbn;         # ISBN
-    printf "%-20.20s\t", $publisher;    # Publisher
-    printf "%-4.4s\t",   $pub_year;     # Year published
-    printf "%-10.10s\t", $date_read;    # Date read
-    print "\n";
-
-    my $validation = $term->readline('Do you want to add this book? (y/n)');
-
-    if ( $validation eq 'y' ) {
-        $table->addRow(
-            {
-                "Title"          => $title,
-                "Author"         => $author,
-                "ISBN13"         => $isbn,
-                "Publisher"      => $publisher,
-                "Year Published" => $pub_year,
-                "Date Read"      => $date_read
-            },
-            0
-        );
-
-        io(DB_FILE_NAME)->print( $table->csv );
-    }
-    else {
-        say "Book was not added";
-    }
+    add_book( $title, $author, $isbn, $publisher, $pub_year, $date_read );
 }    ## --- end sub handler_add
 
 sub handler_ol {
@@ -135,52 +105,38 @@ sub handler_ol {
 
     foreach my $i ( 0 .. $#{ $ol->results } ) {
 
-        printf "%5.5s\t", $i++;
+        printf "%5.5s\t", $i + 1;
         printf "%-20.20s\t", $ol->results->[$i]->{title} // '';    # Title
         printf "%-20.20s\t",
           $ol->results->[$i]->{author_name}->[0] // '';    # Author
         printf "%-13.13s\t", $ol->results->[$i]->{isbn}->[0]      // '';  # ISBN
         printf "%-20.20s\t", $ol->results->[$i]->{publisher}->[0] // '';  # ISBN
         printf "%-4.4s\t", $ol->results->[$i]->{publish_year}->[0] // ''; # ISBN
-              # TODO: printf "%10.10s\t", $date_read;    # Date read
         print "\n";
-
     }
 
     my $id = $term->readline('Which book do you want to add? ');
+    $id--;
 
-    printf "%5.5s\t",    $id++;
-    printf "%-20.20s\t", $ol->results->[$id]->{title} // '';            # Title
-    printf "%-20.20s\t", $ol->results->[$id]->{author_name}->[0] // ''; # Author
-    printf "%-13.13s\t", $ol->results->[$id]->{isbn}->[0] // '';        # ISBN
-    printf "%-20.20s\t", $ol->results->[$id]->{publisher}->[0] // '';   # ISBN
-    printf "%-4.4s\t", $ol->results->[$id]->{publish_year}->[0] // '';  # ISBN
-         # TODO: printf "%10.10s\t", $date_read;    # Date read
-    print "\n";
-
-    my $validation = $term->readline('Do you want to add this book? (y/n) ');
-
-    if ( $validation eq 'y' ) {
-        $table->addRow(
-            {
-                "Title"     => $ol->results->[$id]->{title}            // '',
-                "Author"    => $ol->results->[$id]->{author_name}->[0] // '',
-                "ISBN13"    => $ol->results->[$id]->{isbn}->[0]        // '',
-                "Publisher" => $ol->results->[$id]->{publisher}->[0]   // '',
-                "Year Published" => $ol->results->[$id]->{publish_year}->[0]
-                  // '',
-
-                #TODO:
-                "Date Read" => ''
-            },
-            0
-        );
-
-        io(DB_FILE_NAME)->print( $table->csv );
+    if ( $id < 0 or $id > $#{ $ol->results } ) {
+        say 'Invalid input. No book added.';
+        return;
     }
-    else {
-        say "Book was not added";
-    }
+
+    my $date_read;
+    do {
+        say "You entered an invalid date." if defined $date_read;
+        $date_read = $term->readline("When did you read this book?: ");
+    } while ( not check_date($date_read) );
+
+    add_book(
+        $ol->results->[$id]->{title}             // '',
+        $ol->results->[$id]->{author_name}->[0]  // '',
+        $ol->results->[$id]->{isbn}->[0]         // '',
+        $ol->results->[$id]->{publisher}->[0]    // '',
+        $ol->results->[$id]->{publish_year}->[0] // '',
+        $date_read
+    );
 }    ## --- end sub handler_add
 
 sub handler_delete {
@@ -412,8 +368,46 @@ sub check_date {
     my ($date) = @_;
     my ( $year, $month, $day ) = $date =~ /(\d\d\d\d)\/(\d\d)\/(\d\d)/;
 
-	return 1 if $date eq '-';
+    return 1 if $date eq '-';
     return 1 if $year and $month and $day and $month <= 12 and $day <= 31;
     return 0;
 }    ## --- end sub check_date
 
+sub add_book {
+    my ( $title, $author, $isbn, $publisher, $pub_year, $date_read ) = @_;
+
+    my $table = Data::Table::fromFile(DB_FILE_NAME);
+
+    my $term = Term::ReadLine->new("Add");
+
+    printf "%-20.20s\t", $title;        # Title
+    printf "%-20.20s\t", $author;       # Author
+    printf "%-13.13s\t", $isbn;         # ISBN
+    printf "%-20.20s\t", $publisher;    # Publisher
+    printf "%-4.4s\t",   $pub_year;     # Year published
+    printf "%-10.10s\t", $date_read;    # Date read
+    print "\n";
+
+    my $validation = $term->readline('Do you want to add this book? (y/n)');
+
+    if ( $validation eq 'y' ) {
+        $table->addRow(
+            {
+                "Title"          => $title,
+                "Author"         => $author,
+                "ISBN13"         => $isbn,
+                "Publisher"      => $publisher,
+                "Year Published" => $pub_year,
+                "Date Read"      => $date_read
+            },
+            0
+        );
+
+        io(DB_FILE_NAME)->print( $table->csv );
+    }
+    else {
+        say "Book was not added";
+    }
+
+    return;
+}    ## --- end sub add_book
