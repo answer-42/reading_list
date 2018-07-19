@@ -25,30 +25,50 @@ use feature qw(say switch);
 no warnings "experimental::smartmatch";
 
 use Data::Table;
-use Getopt::Long;
+use Getopt::Std;
 use Scalar::Util 'looks_like_number';
 use Term::ReadLine;
 use IO::All -utf8;
 use API::OpenLibrary::Search;
 use Config::Tiny;
 use Term::ANSIColor;
+use DateTime;
 
 binmode( STDOUT, ":encoding(UTF-8)" );
 
 # Read from config file. Must be placed in the same folder as the script.
-my $config = Config::Tiny->read('/home/sebastian/.reading_list.ini');
+my $config = Config::Tiny->read($ENV{HOME} . '/.reading_list.ini');
 
 my $DB_FILE_NAME = $config->{all}->{csv_file};
 my $COLOR        = $config->{all}->{color};
 
-GetOptions(
-    "Show"        => \&handler_show,
-    "Add"         => \&handler_add,
-    "openlibrary" => \&handler_ol,
-    "Delete"      => \&handler_delete,
-    "Edit"        => \&handler_edit,
-    "Import=s"    => \&handler_import_goodreads
-) or die "Error in command line arguments";
+# s = show
+# a = add
+# o = openlibrary
+# d = delete
+# e = edit
+# i = import, takes and argument
+my %opts;
+getopts( 'saodei:', \%opts );
+
+if ( $opts{s} ) {
+    handler_show();
+}
+elsif ( $opts{a} ) {
+    handler_add();
+}
+elsif ( $opts{o} ) {
+    handler_ol();
+}
+elsif ( $opts{d} ) {
+    handler_delete();
+}
+elsif ( $opts{e} ) {
+    handler_edit();
+}
+elsif ( $opts{i} ) {
+    handler_import_goodreads( $opts{i} );
+}
 
 sub handler_show {
     my $table = Data::Table::fromFile($DB_FILE_NAME);
@@ -77,7 +97,8 @@ sub handler_add {
     my $date_read;
     do {
         say "You entered an invalid date." if defined $date_read;
-        $date_read = $term->readline("Reading date: ");
+        $date_read =
+          $term->readline( "Reading date: ", DateTime->now->ymd('/') );
     } while ( not check_date($date_read) );
 
     add_book( $title, $author, $isbn, $publisher, $pub_year, $date_read );
@@ -122,7 +143,8 @@ sub handler_ol {
     my $date_read;
     do {
         say "You entered an invalid date." if defined $date_read;
-        $date_read = $term->readline("When did you read this book?: ");
+        $date_read = $term->readline( "When did you read this book?: ",
+            DateTime->now->ymd('/') );
     } while ( not check_date($date_read) );
 
     add_book(
@@ -234,8 +256,8 @@ sub handler_edit {
 }    ## --- end sub handler_edit
 
 sub handler_import_goodreads {
-    my ( $opt_name, $input_filename ) = @_;
-    my $table = Data::Table::fromFile($input_filename);
+    my $input_filename = shift;
+    my $table          = Data::Table::fromFile($input_filename);
 
     # Import only books from the read shelf
     $table = $table->match_pattern_hash('$_{"Exclusive Shelf"} eq "read"');
@@ -336,12 +358,12 @@ sub check_isbn {
 sub print_row {
     my ( $table, $row_index ) = @_;
 
-    printf "%10.10s\t",  $row_index + 1;                            # Counter
-	print color('bold red') if $COLOR;
-    printf "%-20.20s\t", $table->elm( $row_index, "Title" );        # Title
-	print color('green') if $COLOR;
-    printf "%-20.20s\t", $table->elm( $row_index, "Author" );       # Author
-	print color('reset') if $COLOR;
+    printf "%10.10s\t", $row_index + 1;    # Counter
+    print color('bold red') if $COLOR;
+    printf "%-20.20s\t", $table->elm( $row_index, "Title" );    # Title
+    print color('green') if $COLOR;
+    printf "%-20.20s\t", $table->elm( $row_index, "Author" );    # Author
+    print color('reset') if $COLOR;
     printf "%-13.13s\t", $table->elm( $row_index, "ISBN13" );       # ISBN
     printf "%-20.20s\t", $table->elm( $row_index, "Publisher" );    # Publisher
     printf "%-4.4s\t",
