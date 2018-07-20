@@ -240,7 +240,7 @@ sub handler_edit {
                 my $validation = $term->readline(
                     "Are you sure you want to save these changes? (y/n) ");
                 if ( $validation eq 'y' ) {
-                    print_to_file( $DB_FILE_NAME, $table->csv );
+                    io($DB_FILE_NAME)->print($table->csv);
                 }
                 else {
                     say "Changes were not saved.";
