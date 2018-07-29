@@ -37,79 +37,67 @@ use DateTime;
 
 binmode( STDOUT, ":encoding(UTF-8)" );
 
+### Initalize
+#############
+
 # Read from config file. Must be placed in the same folder as the script.
 my $config = Config::Tiny->read( $ENV{HOME} . '/.reading_list.ini' );
 
 my $DB_FILE_NAME = $config->{all}->{csv_file};
 my $COLOR        = $config->{all}->{color};
 
-# s = show
-# a = add
-# o = openlibrary
-# d = delete
-# e = edit
-# i = import, takes and argument
+my $table = Data::Table::fromFile($DB_FILE_NAME);
+my $term  = Term::ReadLine->new("Reading List");
+$term->ornaments('0');
+
+# Main
+######
+
 my %opts;
 getopts( 'saodei:', \%opts );
 
 if ( $opts{s} ) {
-    handler_show();
+    handler_show($table);
 }
 elsif ( $opts{a} ) {
-    handler_add();
+    handler_add( $table, $term );
 }
 elsif ( $opts{o} ) {
-    handler_ol();
+    handler_ol( $table, $term );
 }
 elsif ( $opts{d} ) {
-    handler_delete();
+    handler_delete( $table, $term );
 }
 elsif ( $opts{e} ) {
-    handler_edit();
+    handler_edit( $table, $term );
 }
 elsif ( $opts{i} ) {
-    handler_import_goodreads( $opts{i} );
+    handler_import_goodreads( $term, $opts{i} );
 }
 
-sub handler_show {
-    my $table = Data::Table::fromFile($DB_FILE_NAME);
+# Subroutines
+#############
 
+sub handler_show ($table) {
     foreach my $i ( 0 .. $table->lastRow ) {
         print_rows_table( $table, $i );
     }
 }    ## --- end sub handler_show
 
-sub handler_add {
-    my $term = Term::ReadLine->new("Add");
-    $term->ornaments('0');
+sub handler_add ( $table, $term ) {
+    my $title     = prompt_title($term);
+    my $author    = prompt_author($term);
+    my $isbn      = prompt_isbn($term);
+    my $publisher = prompt_publisher($term);
+    my $pub_year  = prompt_pub_year($term);
+    my $date_read = prompt_date_read($term);
 
-    my $title  = $term->readline("Title: ");
-    my $author = $term->readline("Author: ");
-
-    my $isbn;
-    do {
-        say "You entered an invalid ISBN number." if defined $isbn;
-        $isbn = $term->readline("Isbn: ");
-    } while ( not check_isbn($isbn) );
-
-    my $publisher = $term->readline("Publisher: ");
-    my $pub_year  = $term->readline("Publication Year: ");
-
-    my $date_read;
-    do {
-        say "You entered an invalid date." if defined $date_read;
-        $date_read =
-          $term->readline( "Reading date: ", DateTime->now->ymd('/') );
-    } while ( not check_date($date_read) );
-
-    add_book( $title, $author, $isbn, $publisher, $pub_year, $date_read );
+    add_book( $table, $term, $title, $author, $isbn, $publisher, $pub_year,
+        $date_read );
 }    ## --- end sub handler_add
 
-sub handler_ol {
-    my $table = Data::Table::fromFile($DB_FILE_NAME);
-    my $ol    = API::OpenLibrary::Search->new();
-    my $term  = Term::ReadLine->new("OL");
-    $term->ornaments('0');
+sub handler_ol ( $table, $term ) {
+    my $ol = API::OpenLibrary::Search->new();
 
     my $search_term = $term->readline("Search: ");
     $ol->search($search_term);
@@ -141,14 +129,11 @@ sub handler_ol {
         return;
     }
 
-    my $date_read;
-    do {
-        say "You entered an invalid date." if defined $date_read;
-        $date_read = $term->readline( "When did you read this book?: ",
-            DateTime->now->ymd('/') );
-    } while ( not check_date($date_read) );
+    my $date_read = prompt_date_read($term);
 
     add_book(
+        $table,
+        $term,
         $ol->results->[$row_index]->{title}             // '',
         $ol->results->[$row_index]->{author_name}->[0]  // '',
         $ol->results->[$row_index]->{isbn}->[0]         // '',
@@ -158,12 +143,7 @@ sub handler_ol {
     );
 }    ## --- end sub handler_add
 
-sub handler_delete {
-    my $table = Data::Table::fromFile($DB_FILE_NAME);
-
-    my $term = Term::ReadLine->new("Delete");
-    $term->ornaments('0');
-
+sub handler_delete ( $table, $term ) {
     my $row_index =
       $term->readline("Which book do you want to delete? (Insert id) ");
     $row_index--;    # Row number to index.
@@ -181,19 +161,14 @@ sub handler_delete {
     }
 }    ## --- end sub handler_delete
 
-sub handler_edit {
-    my $table = Data::Table::fromFile($DB_FILE_NAME);
-    my $term  = Term::ReadLine->new("Edit");
-    $term->ornaments('0');
-
+sub handler_edit ( $table, $term ) {
     my $row_index =
       $term->readline("Which book do you want to edit? (Insert id) ");
     $row_index--;    # Row number to index.
 
     my $input;
     do {
-        printf "%10.10s\t%20.20s\t%20.20s\t%13.13s\t%20.20s\t%4.4s\t%10.10s\n",
-          '', '[1]', '[2]', '[3]', '[4]', '[5]', '[6]';
+        print_row( -1, '[1]', '[2]', '[3]', '[4]', '[5]', '[6]' );
         print_rows_table( $table, $row_index );
 
         my $input = $term->readline(
@@ -256,7 +231,7 @@ sub handler_edit {
     } while (1);
 }    ## --- end sub handler_edit
 
-sub handler_import_goodreads ($input_filename) {
+sub handler_import_goodreads ( $term, $input_filename ) {
     my $table = Data::Table::fromFile($input_filename);
 
     # Import only books from the read shelf
@@ -304,18 +279,12 @@ sub handler_import_goodreads ($input_filename) {
     }
 
     if ( -f $DB_FILE_NAME ) {
-        my $term = Term::ReadLine->new("Import");
-        $term->ornaments('0');
-
         my $validation = $term->readline(
             "File already exists. Do you want to overwrite it? (y/n)");
-
-        given ($validation) {
-            when ('y') {
-                io($DB_FILE_NAME)->print( import_goodreads_csv($table)->csv );
-            }
-            default { say "File was not saved." }
+        if ( $validation eq 'y' ) {
+            io($DB_FILE_NAME)->print( import_goodreads_csv($table)->csv );
         }
+        else { say "File was not saved." }
     }
     else {
         io($DB_FILE_NAME)->print( import_goodreads_csv($table)->csv );
@@ -398,11 +367,9 @@ sub check_date ($date) {
     return 0;
 }    ## --- end sub check_date
 
-sub add_book ( $title, $author, $isbn, $publisher, $pub_year, $date_read ) {
-    my $table = Data::Table::fromFile($DB_FILE_NAME);
-    my $term  = Term::ReadLine->new("Add");
-    $term->ornaments('0');
-
+sub add_book ( $table, $term, $title, $author, $isbn, $publisher, $pub_year,
+    $date_read )
+{
     print_row( 0, $title, $author, $isbn, $publisher, $pub_year, $date_read );
 
     my $validation = $term->readline('Do you want to add this book? (y/n)');
@@ -426,3 +393,38 @@ sub add_book ( $title, $author, $isbn, $publisher, $pub_year, $date_read ) {
 
     return;
 }    ## --- end sub add_book
+
+sub prompt_title ($term) {
+    $term->readline("Title: ");
+}    ## --- end sub prompt_title
+
+sub prompt_author ($term) {
+    $term->readline("Author: ");
+}    ## --- end sub prompt_title
+
+sub prompt_isbn ($term) {
+    my $isbn;
+    do {
+        say "You entered an invalid ISBN number." if defined $isbn;
+        $isbn = $term->readline("Isbn: ");
+    } while ( not check_isbn($isbn) );
+    return $isbn;
+}    ## --- end sub prompt_title
+
+sub prompt_publisher ($term) {
+    my $publisher = $term->readline("Publisher: ");
+}    # --- end sub prompt_publisher
+
+sub prompt_pub_year ($term) {
+    my $pub_year = $term->readline("Publication Year: ");
+}    ## --- end sub prompt_title
+
+sub prompt_date_read ($term) {
+    my $date_read;
+    do {
+        say "You entered an invalid date." if defined $date_read;
+        $date_read =
+          $term->readline( "Reading date: ", DateTime->now->ymd('/') );
+    } while ( not check_date($date_read) );
+    return $date_read;
+}    ## --- end sub prompt_date_read
