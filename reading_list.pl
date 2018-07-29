@@ -21,8 +21,8 @@
 use strict;
 use warnings;
 use utf8;
-use feature qw(say switch);
-no warnings "experimental::smartmatch";
+use feature qw(say switch signatures);
+no warnings qw/experimental::smartmatch experimental::signatures/;
 
 use Data::Table;
 use Getopt::Std;
@@ -37,7 +37,7 @@ use DateTime;
 binmode( STDOUT, ":encoding(UTF-8)" );
 
 # Read from config file. Must be placed in the same folder as the script.
-my $config = Config::Tiny->read($ENV{HOME} . '/.reading_list.ini');
+my $config = Config::Tiny->read( $ENV{HOME} . '/.reading_list.ini' );
 
 my $DB_FILE_NAME = $config->{all}->{csv_file};
 my $COLOR        = $config->{all}->{color};
@@ -240,7 +240,7 @@ sub handler_edit {
                 my $validation = $term->readline(
                     "Are you sure you want to save these changes? (y/n) ");
                 if ( $validation eq 'y' ) {
-                    io($DB_FILE_NAME)->print($table->csv);
+                    io($DB_FILE_NAME)->print( $table->csv );
                 }
                 else {
                     say "Changes were not saved.";
@@ -255,9 +255,8 @@ sub handler_edit {
     } while (1);
 }    ## --- end sub handler_edit
 
-sub handler_import_goodreads {
-    my $input_filename = shift;
-    my $table          = Data::Table::fromFile($input_filename);
+sub handler_import_goodreads ($input_filename) {
+    my $table = Data::Table::fromFile($input_filename);
 
     # Import only books from the read shelf
     $table = $table->match_pattern_hash('$_{"Exclusive Shelf"} eq "read"');
@@ -328,8 +327,7 @@ sub handler_import_goodreads {
 #   PARAMETERS: isbn (integer)
 #      RETURNS: boolean
 #===============================================================================
-sub check_isbn {
-    my ($isbn) = @_;
+sub check_isbn ($isbn) {
     my @isbn = split '', $isbn;
 
     return 1 if $isbn eq '-';
@@ -355,9 +353,7 @@ sub check_isbn {
     return 0;
 }    ## --- end sub check_isbn
 
-sub print_row {
-    my ( $table, $row_index ) = @_;
-
+sub print_row ($table, $row_index){
     printf "%10.10s\t", $row_index + 1;    # Counter
     print color('bold red') if $COLOR;
     printf "%-20.20s\t", $table->elm( $row_index, "Title" );    # Title
@@ -373,9 +369,7 @@ sub print_row {
 
 }    ## --- end sub print_row
 
-sub change_field {
-    my ( $term, $table, $row_index, $col ) = @_;
-
+sub change_field ($term, $table, $row_index, $col) {
     my $new_title =
       $term->readline( "Edit " . $col . ": ", $table->elm( $row_index, $col ) );
     $table->setElm( $row_index, $col, $new_title );
@@ -383,8 +377,7 @@ sub change_field {
     return $table;
 }    ## --- end sub change_field
 
-sub check_date {
-    my ($date) = @_;
+sub check_date ($date) {
     my ( $year, $month, $day ) = $date =~ /(\d\d\d\d)\/(\d\d)\/(\d\d)/;
 
     return 1 if $date eq '-';
@@ -392,9 +385,7 @@ sub check_date {
     return 0;
 }    ## --- end sub check_date
 
-sub add_book {
-    my ( $title, $author, $isbn, $publisher, $pub_year, $date_read ) = @_;
-
+sub add_book ($title, $author, $isbn, $publisher, $pub_year, $date_read) {
     my $table = Data::Table::fromFile($DB_FILE_NAME);
     my $term  = Term::ReadLine->new("Add");
     $term->ornaments('0');
