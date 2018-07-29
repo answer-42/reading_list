@@ -165,6 +165,10 @@ sub handler_edit ( $table, $term ) {
     my $row_index =
       $term->readline("Which book do you want to edit? (Insert id) ");
     $row_index--;    # Row number to index.
+    if ( $row_index < 0 or $row_index > $table->lastRow ) {
+        say 'Invalid input. No book edited.';
+        return;
+    }
 
     my $input;
     do {
