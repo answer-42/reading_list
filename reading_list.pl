@@ -13,7 +13,7 @@
 #        NOTES: ---
 #       AUTHOR: Sebastian Benque (SWRB), sebastian.benque@gmail.com
 # ORGANIZATION:
-#      VERSION: 1.0
+#      VERSION: 1.1
 #      CREATED: 06/09/2018 08:24:22 AM
 #     REVISION: ---
 #===============================================================================
@@ -21,9 +21,9 @@
 use strict;
 use warnings;
 use utf8;
-use feature qw(say switch signatures postderef);
+use feature qw(say switch signatures);
 no warnings
-  qw/experimental::smartmatch experimental::signatures experimental::postderef/;
+  qw/experimental::smartmatch experimental::signatures/;
 
 use Data::Table;
 use Getopt::Std;
@@ -111,14 +111,14 @@ sub handler_ol ( $table, $term ) {
         return;
     }
 
-    foreach my $i ( 0 .. $#{ $ol->results } ) {
+    foreach my $row_index ( 0 .. $#{ $ol->results } ) {
         print_row(
-            $i,    # Row index
-            $ol->results->[$i]->{title}             // '',    # Title
-            $ol->results->[$i]->{author_name}->[0]  // '',    # Author
-            $ol->results->[$i]->{isbn}->[0]         // '',    # ISBN
-            $ol->results->[$i]->{publisher}->[0]    // '',    # ISBN
-            $ol->results->[$i]->{publish_year}->[0] // '',    # ISBN
+            $row_index,    # Row index
+            $ol->results->[$row_index]->{title}             // '',    # Title
+            $ol->results->[$row_index]->{author_name}->[0]  // '',    # Author
+            $ol->results->[$row_index]->{isbn}->[0]         // '',    # ISBN
+            $ol->results->[$row_index]->{publisher}->[0]    // '',    # Publisher
+            $ol->results->[$row_index]->{publish_year}->[0] // '',    # Publish year
         );
     }
 
