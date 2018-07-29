@@ -21,8 +21,9 @@
 use strict;
 use warnings;
 use utf8;
-use feature qw(say switch signatures);
-no warnings qw/experimental::smartmatch experimental::signatures/;
+use feature qw(say switch signatures postderef);
+no warnings
+  qw/experimental::smartmatch experimental::signatures experimental::postderef/;
 
 use Data::Table;
 use Getopt::Std;
@@ -74,7 +75,7 @@ sub handler_show {
     my $table = Data::Table::fromFile($DB_FILE_NAME);
 
     foreach my $i ( 0 .. $table->lastRow ) {
-        print_row( $table, $i );
+        print_rows_table( $table, $i );
     }
 }    ## --- end sub handler_show
 
@@ -123,14 +124,14 @@ sub handler_ol {
     }
 
     foreach my $i ( 0 .. $#{ $ol->results } ) {
-        printf "%5.5s\t", $i + 1;
-        printf "%-20.20s\t", $ol->results->[$i]->{title} // '';    # Title
-        printf "%-20.20s\t",
-          $ol->results->[$i]->{author_name}->[0] // '';    # Author
-        printf "%-13.13s\t", $ol->results->[$i]->{isbn}->[0]      // '';  # ISBN
-        printf "%-20.20s\t", $ol->results->[$i]->{publisher}->[0] // '';  # ISBN
-        printf "%-4.4s\t", $ol->results->[$i]->{publish_year}->[0] // ''; # ISBN
-        print "\n";
+        print_row(
+            $i,    # Row index
+            $ol->results->[$i]->{title}             // '',    # Title
+            $ol->results->[$i]->{author_name}->[0]  // '',    # Author
+            $ol->results->[$i]->{isbn}->[0]         // '',    # ISBN
+            $ol->results->[$i]->{publisher}->[0]    // '',    # ISBN
+            $ol->results->[$i]->{publish_year}->[0] // '',    # ISBN
+        );
     }
 
     my $row_index = $term->readline('Which book do you want to add? ');
@@ -167,7 +168,7 @@ sub handler_delete {
       $term->readline("Which book do you want to delete? (Insert id) ");
     $row_index--;    # Row number to index.
 
-    print_row( $table, $row_index );
+    print_rows_table( $table, $row_index );
 
     my $validation =
       $term->readline("Are you sure you want to delete this book? (y/n) ");
@@ -193,7 +194,7 @@ sub handler_edit {
     do {
         printf "%10.10s\t%20.20s\t%20.20s\t%13.13s\t%20.20s\t%4.4s\t%10.10s\n",
           '', '[1]', '[2]', '[3]', '[4]', '[5]', '[6]';
-        print_row( $table, $row_index );
+        print_rows_table( $table, $row_index );
 
         my $input = $term->readline(
             "Which field (1-6) do you want to change? To stop editing press q. "
@@ -353,23 +354,35 @@ sub check_isbn ($isbn) {
     return 0;
 }    ## --- end sub check_isbn
 
-sub print_row ($table, $row_index){
+sub print_rows_table ( $table, $row_index ) {
+    print_row(
+        $row_index,
+        $table->elm( $row_index, "Title" ),
+        $table->elm( $row_index, "Author" ),
+        $table->elm( $row_index, "ISBN13" ),
+        $table->elm( $row_index, "Publisher" ),
+        $table->elm( $row_index, "Year Published" ),
+        $table->elm( $row_index, "Date Read" ),
+    );
+}    ## --- end sub print_rows_table
+
+sub print_row ( $row_index, $title, $author, $isbn, $publisher, $publish_year,
+    $date_read = '' )
+{
     printf "%10.10s\t", $row_index + 1;    # Counter
     print color('bold red') if $COLOR;
-    printf "%-20.20s\t", $table->elm( $row_index, "Title" );    # Title
+    printf "%-20.20s\t", $title;           # Title
     print color('green') if $COLOR;
-    printf "%-20.20s\t", $table->elm( $row_index, "Author" );    # Author
+    printf "%-20.20s\t", $author;          # Author
     print color('reset') if $COLOR;
-    printf "%-13.13s\t", $table->elm( $row_index, "ISBN13" );       # ISBN
-    printf "%-20.20s\t", $table->elm( $row_index, "Publisher" );    # Publisher
-    printf "%-4.4s\t",
-      $table->elm( $row_index, "Year Published" );    # Year published
-    printf "%-10.10s\t", $table->elm( $row_index, "Date Read" );    # Date read
+    printf "%-13.13s\t", $isbn;            # ISBN
+    printf "%-20.20s\t", $publisher;       # Publisher
+    printf "%-4.4s\t",   $publish_year;    # Year published
+    printf "%-10.10s\t", $date_read;       # Date read
     print "\n";
-
 }    ## --- end sub print_row
 
-sub change_field ($term, $table, $row_index, $col) {
+sub change_field ( $term, $table, $row_index, $col ) {
     my $new_title =
       $term->readline( "Edit " . $col . ": ", $table->elm( $row_index, $col ) );
     $table->setElm( $row_index, $col, $new_title );
@@ -385,18 +398,12 @@ sub check_date ($date) {
     return 0;
 }    ## --- end sub check_date
 
-sub add_book ($title, $author, $isbn, $publisher, $pub_year, $date_read) {
+sub add_book ( $title, $author, $isbn, $publisher, $pub_year, $date_read ) {
     my $table = Data::Table::fromFile($DB_FILE_NAME);
     my $term  = Term::ReadLine->new("Add");
     $term->ornaments('0');
 
-    printf "%-20.20s\t", $title;        # Title
-    printf "%-20.20s\t", $author;       # Author
-    printf "%-13.13s\t", $isbn;         # ISBN
-    printf "%-20.20s\t", $publisher;    # Publisher
-    printf "%-4.4s\t",   $pub_year;     # Year published
-    printf "%-10.10s\t", $date_read;    # Date read
-    print "\n";
+    print_row( 0, $title, $author, $isbn, $publisher, $pub_year, $date_read );
 
     my $validation = $term->readline('Do you want to add this book? (y/n)');
     if ( $validation eq 'y' ) {
