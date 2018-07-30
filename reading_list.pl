@@ -46,7 +46,23 @@ my $DB_FILE_NAME = $config->{all}->{csv_file};
 my $COLOR        = $config->{all}->{color};
 
 my $table = Data::Table::fromFile($DB_FILE_NAME);
-my $term  = Term::ReadLine->new("Reading List");
+
+my $term    = Term::ReadLine->new("Reading List");
+my $attribs = $term->Attribs;
+$attribs->{completion_entry_function} = $attribs->{list_completion_function};
+
+my @completion_words_list;
+for my $row_index ( 0 .. $table->lastRow ) {
+    push @completion_words_list,
+      (
+        $table->elm( $row_index, "Title" ),
+        $table->elm( $row_index, "Author" ),
+        $table->elm( $row_index, "Publisher" )
+      );
+}
+
+$attribs->{completion_word} = [@completion_words_list];
+
 $term->ornaments('0');
 
 # Main
