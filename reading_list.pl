@@ -18,6 +18,8 @@
 #     REVISION: ---
 #===============================================================================
 
+# TODO: abstract the CSV interface away
+
 use strict;
 use warnings;
 use utf8;
@@ -147,7 +149,7 @@ sub handler_ol ( $table, $term ) {
 
     my $row_index = $term->readline('Which book do you want to add? ');
     $row_index--;
-    if ( $row_index < 0 or $row_index > $#{ $ol->results } ) {
+    if ( $row_index < 0 or $row_index > $ol->results->@* ) {
         say 'Invalid input. No book added.';
         return;
     }
@@ -455,3 +457,4 @@ sub prompt_date_read ($term) {
     } while ( not check_date($date_read) );
     return $date_read;
 }    ## --- end sub prompt_date_read
+
