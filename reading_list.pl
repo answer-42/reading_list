@@ -22,8 +22,7 @@ use strict;
 use warnings;
 use utf8;
 use feature qw(say switch signatures);
-no warnings
-  qw/experimental::smartmatch experimental::signatures/;
+no warnings qw/experimental::smartmatch experimental::signatures/;
 
 use Data::Table;
 use Getopt::Std;
@@ -35,10 +34,10 @@ use Config::Tiny;
 use Term::ANSIColor;
 use DateTime;
 
-binmode( STDOUT, ":encoding(UTF-8)" );
-
 ### Initalize
 #############
+
+binmode( STDOUT, ":encoding(UTF-8)" );
 
 # Read from config file. Must be placed in the same folder as the script.
 my $config = Config::Tiny->read( $ENV{HOME} . '/.reading_list.ini' );
@@ -47,14 +46,30 @@ my $DB_FILE_NAME = $config->{all}->{csv_file};
 my $COLOR        = $config->{all}->{color};
 
 my $table = Data::Table::fromFile($DB_FILE_NAME);
-my $term  = Term::ReadLine->new("Reading List");
+
+my $term    = Term::ReadLine->new("Reading List");
+my $attribs = $term->Attribs;
+$attribs->{completion_entry_function} = $attribs->{list_completion_function};
+
+my @completion_words_list;
+for my $row_index ( 0 .. $table->lastRow ) {
+    push @completion_words_list,
+      (
+        $table->elm( $row_index, "Title" ),
+        $table->elm( $row_index, "Author" ),
+        $table->elm( $row_index, "Publisher" )
+      );
+}
+
+$attribs->{completion_word} = [@completion_words_list];
+
 $term->ornaments('0');
 
 # Main
 ######
 
 my %opts;
-getopts( 'saodei:', \%opts );
+getopts( 'saodeil:', \%opts );
 
 if ( $opts{s} ) {
     handler_show($table);
@@ -74,9 +89,16 @@ elsif ( $opts{e} ) {
 elsif ( $opts{i} ) {
     handler_import_goodreads( $term, $opts{i} );
 }
+elsif ( $opts{l} ) {
+    handler_look( $table, $opts{l} );
+}
 
 # Subroutines
 #############
+
+sub handler_look ( $table, $search_term ) {
+    handler_show( $table->match_string( $search_term, 1, 0 ) );
+}    ## --- end sub handler_look
 
 sub handler_show ($table) {
     foreach my $i ( 0 .. $table->lastRow ) {
@@ -113,12 +135,13 @@ sub handler_ol ( $table, $term ) {
 
     foreach my $row_index ( 0 .. $#{ $ol->results } ) {
         print_row(
-            $row_index,    # Row index
-            $ol->results->[$row_index]->{title}             // '',    # Title
-            $ol->results->[$row_index]->{author_name}->[0]  // '',    # Author
-            $ol->results->[$row_index]->{isbn}->[0]         // '',    # ISBN
-            $ol->results->[$row_index]->{publisher}->[0]    // '',    # Publisher
-            $ol->results->[$row_index]->{publish_year}->[0] // '',    # Publish year
+            $row_index,                                           # Row index
+            $ol->results->[$row_index]->{title} // '',            # Title
+            $ol->results->[$row_index]->{author_name}->[0] // '', # Author
+            $ol->results->[$row_index]->{isbn}->[0] // '',        # ISBN
+            $ol->results->[$row_index]->{publisher}->[0] // '',   # Publisher
+            $ol->results->[$row_index]->{publish_year}->[0]
+              // '',                                              # Publish year
         );
     }
 
@@ -134,10 +157,10 @@ sub handler_ol ( $table, $term ) {
     add_book(
         $table,
         $term,
-        $ol->results->[$row_index]->{title}             // '',
-        $ol->results->[$row_index]->{author_name}->[0]  // '',
-        $ol->results->[$row_index]->{isbn}->[0]         // '',
-        $ol->results->[$row_index]->{publisher}->[0]    // '',
+        $ol->results->[$row_index]->{title} // '',
+        $ol->results->[$row_index]->{author_name}->[0] // '',
+        $ol->results->[$row_index]->{isbn}->[0] // '',
+        $ol->results->[$row_index]->{publisher}->[0] // '',
         $ol->results->[$row_index]->{publish_year}->[0] // '',
         $date_read
     );
