@@ -14,7 +14,7 @@
 #     REVISION: ---
 #===============================================================================
 
-package Book;
+package Books;
 
 # Checking only if values are set with the setter functions and not with the constructor.
 
@@ -51,7 +51,7 @@ coerce 'ISBN',
 
 has 'title'  => ( is  => 'rw',   default => '' );
 has 'author' => ( is  => 'rw',   default => '' );
-has 'book_index' => (is => 'rw', isa => 'Int', required => 1);
+has 'book_index' => (is => 'rw', isa => 'Int');
 has 'isbn'   => ( isa => 'ISBN', is      => 'rw', coerce => 1, default => '' );
 has 'publisher' => (
     is      => 'rw',

@@ -32,6 +32,7 @@ use Getopt::Std;
 use Term::ReadLine;
 use Config::Tiny;
 use Term::ANSIColor;
+use DateTime;
 
 use Books;
 use ReadingList;
@@ -50,20 +51,24 @@ my $reading_list =
 
 $reading_list->load;
 
-my $term    = Term::ReadLine->new("Reading List");
-my $attribs = $term->Attribs;
-$attribs->{completion_entry_function} = $attribs->{list_completion_function};
+sub init_term () {
+    my $term    = Term::ReadLine->new("Reading List");
+    my $attribs = $term->Attribs;
+    $attribs->{completion_entry_function} =
+      $attribs->{list_completion_function};
 
-my @completion_words_list;
-$reading_list->init_interator;
-while ( my $book = $reading_list->next ) {
-    push @completion_words_list,
-      ( $book->{title}, $book->{author}, $book->{publisher} );
+    my @completion_words_list;
+    $reading_list->init_interator;
+    while ( my $book = $reading_list->next ) {
+        push @completion_words_list,
+          ( $book->{title}, $book->{author}, $book->{publisher} );
+    }
+
+    $attribs->{completion_word} = [@completion_words_list];
+
+    $term->ornaments('0');
+    return $term;
 }
-
-$attribs->{completion_word} = [@completion_words_list];
-
-$term->ornaments('0');
 
 # Main
 ######
@@ -75,9 +80,8 @@ if ( $opts{s} ) {
     handler_show( $reading_list, $COLOR );
 }
 elsif ( $opts{a} ) {
-
-    #    handler_add( $table, $term );
-    say 'a';
+    my $term = init_term();
+    handler_add( $reading_list, $term );
 }
 elsif ( $opts{o} ) {
 
@@ -85,10 +89,8 @@ elsif ( $opts{o} ) {
     say 'o';
 }
 elsif ( $opts{d} ) {
-
-    #    handler_delete( $table, $term );
-    say 'd';
-
+    my $term = init_term();
+    handler_delete( $reading_list, $term );
 }
 elsif ( $opts{e} ) {
 
@@ -113,14 +115,14 @@ elsif ( $opts{l} ) {
 #    handler_show( $table->match_string( $search_term, 1, 0 ) );
 #}    ## --- end sub handler_look
 
-sub handler_show ( $reading_list, $color = 0 ) {
+sub handler_show ( $reading_list, $color = 1 ) {
     $reading_list->init_interator;
     while ( my $book = $reading_list->next ) {
         print_book( $book, $color );
     }
 }    ## --- end sub handler_show
 
-sub print_book ( $book, $color ) {
+sub print_book ( $book, $color=1 ) {
     printf "%10.10s\t", $book->book_index + 1;    # Counter
     print color('red bold') if $color;
     printf "%-20.20s\t", $book->title;            # Title
@@ -134,19 +136,70 @@ sub print_book ( $book, $color ) {
     print "\n";
 }    ## --- end sub print_row
 
+sub handler_add ( $reading_list, $term ) {
+    my $book = Books->new;
+    $book->title(prompt_title($term));
+    $book->author(prompt_author($term));
+    $book->isbn(prompt_isbn($term));
+    $book->publisher(prompt_publisher($term));
+    $book->year_published(prompt_pub_year($term));
+    $book->date_read(prompt_date_read($term));
 
-#sub handler_add ( $table, $term ) {
-#    my $title     = prompt_title($term);
-#    my $author    = prompt_author($term);
-#    my $isbn      = prompt_isbn($term);
-#    my $publisher = prompt_publisher($term);
-#    my $pub_year  = prompt_pub_year($term);
-#    my $date_read = prompt_date_read($term);
-#
-#    add_book( $table, $term, $title, $author, $isbn, $publisher, $pub_year,
-#        $date_read );
-#}    ## --- end sub handler_add
-#
+    $reading_list->add($book);
+	
+	print_book($book);
+	validate_save_changes($reading_list, $term);
+}    ## --- end sub handler_add
+
+sub prompt_title ($term) {
+    $term->readline("Title: ");
+}    ## --- end sub prompt_title
+
+sub prompt_author ($term) {
+    $term->readline("Author: ");
+}    ## --- end sub prompt_title
+
+sub prompt_isbn ($term) {
+    $term->readline("Isbn: ");
+}    ## --- end sub prompt_title
+
+sub prompt_publisher ($term) {
+    $term->readline("Publisher: ");
+}    # --- end sub prompt_publisher
+
+sub prompt_pub_year ($term) {
+    $term->readline("Publication Year: ");
+}    ## --- end sub prompt_title
+
+sub prompt_date_read ($term) {
+    $term->readline( "Reading date: ", DateTime->now->ymd('/') );
+}    ## --- end sub prompt_date_read
+
+sub handler_delete ( $reading_list, $term ) {
+    my $book_index =
+      $term->readline("Which book do you want to delete? (Insert id) ");
+    $book_index--;    # Book number to index.
+	#TODO: check input 
+	
+	# Show book to delete
+	print_book($reading_list->get($book_index) );
+
+	$reading_list->delete($book_index);
+	validate_save_changes($reading_list, $term);
+}    ## --- end sub handler_delete
+
+sub validate_save_changes ($reading_list, $term) {
+    my $validation =
+      $term->readline("Are you sure you want to save the changes? (y/n) ");
+    if ( $validation eq 'y' ) {
+		$reading_list->save;
+    }
+    else {
+        say "Changes were not saved.";
+    }
+
+} ## --- end sub validate_save_changes
+
 #sub handler_ol ( $table, $term ) {
 #    my $ol = API::OpenLibrary::Search->new();
 #
@@ -194,24 +247,6 @@ sub print_book ( $book, $color ) {
 #        $date_read
 #    );
 #}    ## --- end sub handler_add
-#
-#sub handler_delete ( $table, $term ) {
-#    my $row_index =
-#      $term->readline("Which book do you want to delete? (Insert id) ");
-#    $row_index--;    # Row number to index.
-#
-#    print_rows_table( $table, $row_index );
-#
-#    my $validation =
-#      $term->readline("Are you sure you want to delete this book? (y/n) ");
-#    if ( $validation eq 'y' ) {
-#        $table->delRow($row_index);
-#        io($DB_FILE_NAME)->print( $table->csv );
-#    }
-#    else {
-#        say "Book was not deleted";
-#    }
-#}    ## --- end sub handler_delete
 #
 #sub handler_edit ( $table, $term ) {
 #    my $row_index =
@@ -433,40 +468,5 @@ sub print_book ( $book, $color ) {
 #
 #    return;
 #}    ## --- end sub add_book
-#
-#sub prompt_title ($term) {
-#    $term->readline("Title: ");
-#}    ## --- end sub prompt_title
-#
-#sub prompt_author ($term) {
-#    $term->readline("Author: ");
-#}    ## --- end sub prompt_title
-#
-#sub prompt_isbn ($term) {
-#    my $isbn;
-#    do {
-#        say "You entered an invalid ISBN number." if defined $isbn;
-#        $isbn = $term->readline("Isbn: ");
-#    } while ( not check_isbn($isbn) );
-#    return $isbn;
-#}    ## --- end sub prompt_title
-#
-#sub prompt_publisher ($term) {
-#    my $publisher = $term->readline("Publisher: ");
-#}    # --- end sub prompt_publisher
-#
-#sub prompt_pub_year ($term) {
-#    my $pub_year = $term->readline("Publication Year: ");
-#}    ## --- end sub prompt_title
-#
-#sub prompt_date_read ($term) {
-#    my $date_read;
-##    do {
-#        say "You entered an invalid date." if defined $date_read;
-#        $date_read =
-#          $term->readline( "Reading date: ", DateTime->now->ymd('/') );
-#    } while ( not check_date($date_read) );
-#    return $date_read;
-#}    ## --- end sub prompt_date_read
 #
 

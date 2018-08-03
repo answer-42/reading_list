@@ -57,37 +57,36 @@ sub load ($self) {
     }
 }    ## --- end sub load
 
-sub add ( $self, $title, $author, $isbn, $publisher, $pub_year, $date_read ) {
+sub add ( $self, $book) {
     $self->table->addRow(
         {
-            "Title"          => $title,
-            "Author"         => $author,
-            "ISBN13"         => $isbn,
-            "Publisher"      => $publisher,
-            "Year Published" => $pub_year,
-            "Date Read"      => $date_read
+            "Title"          => $book->title,
+            "Author"         => $book->author,
+            "ISBN13"         => $book->isbn,
+            "Publisher"      => $book->publisher,
+            "Year Published" => $book->year_published,
+            "Date Read"      => $book->date_read
         },
         0
     );
 }    ## --- end sub add
 
-sub delete ( $self, $book_number ) {
-    $book_number--;    # get row index
-    $self->table->delRow($book_number);
+sub delete ( $self, $book_index ) {
+    $self->table->delRow($book_index);
 }    ## --- end sub delete
 
 sub edit ( $self, $book_number, $field, $new_value ) {
 
 }    ## --- end sub edit
 
-sub get ( $self, $book_number ) {
-    my $book = Book->new(book_index => $book_number);
-    $book->title( $self->table->elm( $book_number, "Title" ) );
-    $book->publisher( $self->table->elm( $book_number, "Publisher" ) );
-    $book->author( $self->table->elm( $book_number, "Author" ) );
-    $book->isbn( $self->table->elm( $book_number, "ISBN13" ) );
-    $book->year_published( $self->table->elm( $book_number, "Year Published" ) );
-    $book->date_read( $self->table->elm( $book_number, "Date Read" ) );
+sub get ( $self, $book_index ) {
+    my $book = Books->new(book_index => $book_index);
+    $book->title( $self->table->elm( $book_index, "Title" ) );
+    $book->publisher( $self->table->elm( $book_index, "Publisher" ) );
+    $book->author( $self->table->elm( $book_index, "Author" ) );
+    $book->isbn( $self->table->elm( $book_index, "ISBN13" ) );
+    $book->year_published( $self->table->elm( $book_index, "Year Published" ) );
+    $book->date_read( $self->table->elm( $book_index, "Date Read" ) );
     return $book
 }    ## --- end sub get
 
