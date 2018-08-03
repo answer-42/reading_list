@@ -16,7 +16,7 @@
 
 package ReadingList;
 
-use Moose;
+use Moo;
 use namespace::autoclean;
 use utf8;
 
@@ -32,19 +32,18 @@ use API::OpenLibrary::Search;
 use DateTime;
 use Books;
 
-has 'db_file_name' => ( is => 'ro', isa => 'Str', required => 1 );
-has 'table' => ( is => 'ro', writer => '_table' );
-has 'boolean_map' =>
-  ( is => 'ro', writer => '_boolean_map', isa => 'ArrayRef[Bool]' );
-has 'position' => ( is => 'ro', writer => '_position', isa => 'Int' );
+has 'db_file_name' => ( is => 'ro', required => 1 );
+has 'table'        => ( is => 'rwp' );
+has 'boolean_map'  => ( is => 'rwp' );
+has 'position'     => ( is => 'rwp' );
 
 sub load ($self) {
     if ( -f $self->db_file_name() ) {
-        $self->_table( Data::Table::fromFile( $self->db_file_name() ) );
+        $self->_set_table( Data::Table::fromFile( $self->db_file_name() ) );
     }
     else {
         # Initialize empty csv table
-        $self->_table->(
+        $self->_set_table->(
             Data::Table->new(
                 [],
                 [
@@ -57,7 +56,7 @@ sub load ($self) {
     }
 }    ## --- end sub load
 
-sub add ( $self, $book) {
+sub add ( $self, $book ) {
     $self->table->addRow(
         {
             "Title"          => $book->title,
@@ -80,35 +79,35 @@ sub edit ( $self, $book_number, $field, $new_value ) {
 }    ## --- end sub edit
 
 sub get ( $self, $book_index ) {
-    my $book = Books->new(book_index => $book_index);
+    my $book = Books->new( book_index => $book_index );
     $book->title( $self->table->elm( $book_index, "Title" ) );
     $book->publisher( $self->table->elm( $book_index, "Publisher" ) );
     $book->author( $self->table->elm( $book_index, "Author" ) );
     $book->isbn( $self->table->elm( $book_index, "ISBN13" ) );
     $book->year_published( $self->table->elm( $book_index, "Year Published" ) );
     $book->date_read( $self->table->elm( $book_index, "Date Read" ) );
-    return $book
+    return $book;
 }    ## --- end sub get
 
 sub search ( $self, $search_term ) {
     $self->table->match_string( $search_term, 1, 0 );
-    $self->boolean_map( $self->table->{OK} )
+    $self->_set_boolean_map( $self->table->{OK} )
       ;    # Map which corresponds with the found elements.
 }    ## --- emd sub search
 
 sub init_interator ($self) {
-    $self->_position(0);
+    $self->_set_position(0);
 }    ## --- end sub init_iterator
 
 sub next ( $self, $search = 0 ) {
     my $i        = $self->position;
     my $last_row = $self->table->lastRow;
     if ( $search and $i <= $last_row and not $self->boolean_map->[$i] ) {
-        $self->_position( $i + 1 );
+        $self->_set_position( $i + 1 );
         $self->next($search);
     }
     elsif ( $i <= $last_row ) {
-        $self->_position( $i + 1 );
+        $self->_set_position( $i + 1 );
         return $self->get($i);
     }
     else {
