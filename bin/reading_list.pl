@@ -74,7 +74,7 @@ sub init_term () {
 ######
 
 my %opts;
-getopts( 'saodeil:', \%opts );
+getopts( 'saode:il:', \%opts );
 
 if ( $opts{s} ) {
     handler_show( $reading_list, $COLOR );
@@ -93,12 +93,10 @@ elsif ( $opts{d} ) {
     handler_delete( $reading_list, $term );
 }
 elsif ( $opts{e} ) {
-
-    #    handler_edit( $table, $term );
-    say 'e';
+    my $term = init_term();
+    handler_edit( $reading_list, $opts{e}, $term );
 }
 elsif ( $opts{i} ) {
-
     #    handler_import_goodreads( $term, $opts{i} );
     say 'i';
 }
@@ -205,129 +203,51 @@ sub validate_save_changes ( $reading_list, $term ) {
         say "Changes were not saved.";
     }
 }    ## --- end sub validate_save_changes
+sub handler_edit ( $reading_list, $book_index, $term ) {
+    $book_index--;    # Book number to index.
+ 	# Book index in range
+	unless ($reading_list->is_valid_book_index($book_index)) {
+		say "Book number not in range." ;
+		return
+	}
 
-#sub handler_ol ( $table, $term ) {
-#    my $ol = API::OpenLibrary::Search->new();
-#
-#    my $search_term = $term->readline("Search: ");
-#    $ol->search($search_term);
-#    if ( $ol->status_code != 200 ) {
-#        say "Ther is a problem with the connection. Error code: ",
-#          $ol->status_code;
-#        return;
-#    }
-#    elsif ( $ol->num_found == 0 ) {
-#        say "No books found.";
-#        return;
-#    }
-#
-#    foreach my $row_index ( 0 .. $#{ $ol->results } ) {
-#        print_row(
-#            $row_index,                                           # Row index
-#            $ol->results->[$row_index]->{title} // '',            # Title
-#            $ol->results->[$row_index]->{author_name}->[0] // '', # Author
-#            $ol->results->[$row_index]->{isbn}->[0] // '',        # ISBN
-#            $ol->results->[$row_index]->{publisher}->[0] // '',   # Publisher
-#            $ol->results->[$row_index]->{publish_year}->[0]
-#              // '',                                              # Publish year
-#        );
-#    }
-#
-#    my $row_index = $term->readline('Which book do you want to add? ');
-#    $row_index--;
-#    if ( $row_index < 0 or $row_index > $ol->results->@* ) {
-#        say 'Invalid input. No book added.';
-#        return;
-#    }
-#
-#    my $date_read = prompt_date_read($term);
-#
-#    add_book(
-#        $table,
-#        $term,
-#        $ol->results->[$row_index]->{title} // '',
-#        $ol->results->[$row_index]->{author_name}->[0] // '',
-#        $ol->results->[$row_index]->{isbn}->[0] // '',
-#        $ol->results->[$row_index]->{publisher}->[0] // '',
-#        $ol->results->[$row_index]->{publish_year}->[0] // '',
-#        $date_read
-#    );
-#}    ## --- end sub handler_add
-#
-#sub handler_edit ( $table, $term ) {
-#    my $row_index =
-#      $term->readline("Which book do you want to edit? (Insert id) ");
-#    $row_index--;    # Row number to index.
-#    if ( $row_index < 0 or $row_index > $table->lastRow ) {
-#        say 'Invalid input. No book edited.';
-#        return;
-#    }
-#
-#    my $input;
-#    do {
-#        print_row( -1, '[1]', '[2]', '[3]', '[4]', '[5]', '[6]' );
-#        print_rows_table( $table, $row_index );
-#
-#        my $input = $term->readline(
-#            "Which field (1-6) do you want to change? To stop editing press q. "
-#        );
-#
-#        given ($input) {
-#            when ('1') {
-#                $table = change_field( $term, $table, $row_index, "Title" );
-#            }
-#            when ('2') {
-#                $table = change_field( $term, $table, $row_index, "Author" );
-#            }
-#            when ('3') {
-#                my $new_isbn =
-#                  $term->readline( "Edit Isbn: ",
-#                    $table->elm( $row_index, "ISBN13" ) );
-#
-#                if ( check_isbn($new_isbn) ) {
-#                    $table->setElm( $row_index, "ISBN13", $new_isbn );
-#                }
-#                else {
-#                    say "Not a valid Isbn number.";
-#                }
-#            }
-#            when ('4') {
-#                $table = change_field( $term, $table, $row_index, "Publisher" );
-#            }
-#            when ('5') {
-#                $table =
-#                  change_field( $term, $table, $row_index, "Year Published" );
-#            }
-#            when ('6') {
-#                my $new_date_read = $term->readline( "Edit reading date: ",
-#                    $table->elm( $row_index, "Date Read" ) );
-#
-#                if ( check_date($new_date_read) ) {
-#                    $table->setElm( $row_index, "Date Read", $new_date_read );
-#                }
-#                else {
-#                    say "Not a valid date.";
-#                }
-#            }
-#            when ('q') {
-#                my $validation = $term->readline(
-#                    "Are you sure you want to save these changes? (y/n) ");
-#                if ( $validation eq 'y' ) {
-#                    io($DB_FILE_NAME)->print( $table->csv );
-#                }
-#                else {
-#                    say "Changes were not saved.";
-#                }
-#
-#                return;
-#            }
-#            default {
-#                say "No valid input";
-#            }
-#        }
-#    } while (1);
-#}    ## --- end sub handler_edit
-#
+	my $book = $reading_list->get($book_index);
+    my $input;
+    do {
+    	print_book( $book );
+        my $input = $term->readline(
+            "Change [t]itle, [a]uthor, [i]sbn, [p]ublisher, publication [y]ear or [d]ate read? To stop editing press q. "
+        );
+
+        if ($input eq 't') {
+	  		$book->title($term->readline( "Edit Title: ", $book->title ));
+            }
+            elsif ($input eq 'a') {
+	  		$book->author($term->readline( "Edit Author: ", $book->author ));
+            }
+            elsif ($input eq 'i') {
+	  		$book->isbn($term->readline( "Edit ISBN: ", $book->isbn ));
+            }
+            elsif ($input eq 'p') {
+	  		$book->publisher($term->readline( "Edit Publisher: ", $book->publisher ));
+            }
+            elsif ($input eq 'y') {
+	  		$book->year_published($term->readline( "Edit Year Published: ", $book->year_published ));
+            }
+            elsif ($input eq 'd') {
+	  		$book->date_read($term->readline( "Edit Publisher: ", $book->date_read ));
+            }
+            elsif ($input eq 'q') {
+				$reading_list->edit($book_index, $book);
+				validate_save_changes($reading_list, $term);
+				return
+            }
+			else {
+                say "No valid input";
+            }
+    } while (1);
+}    ## --- end sub handler_edit
+
 #sub handler_import_goodreads ( $term, $input_filename ) {
 #    my $table = Data::Table::fromFile($input_filename);
 #
@@ -395,12 +315,54 @@ sub validate_save_changes ( $reading_list, $term ) {
 ##      RETURNS: boolean
 ##===============================================================================
 
-#sub change_field ( $term, $table, $row_index, $col ) {
-#    my $new_title =
-#      $term->readline( "Edit " . $col . ": ", $table->elm( $row_index, $col ) );
-#    $table->setElm( $row_index, $col, $new_title );
+
+
+#sub handler_ol ( $table, $term ) {
+#    my $ol = API::OpenLibrary::Search->new();
 #
-#    return $table;
-#}    ## --- end sub change_field
+#    my $search_term = $term->readline("Search: ");
+#    $ol->search($search_term);
+#    if ( $ol->status_code != 200 ) {
+#        say "Ther is a problem with the connection. Error code: ",
+#          $ol->status_code;
+#        return;
+#    }
+#    elsif ( $ol->num_found == 0 ) {
+#        say "No books found.";
+#        return;
+#    }
+#
+#    foreach my $row_index ( 0 .. $#{ $ol->results } ) {
+#        print_row(
+#            $row_index,                                           # Row index
+#            $ol->results->[$row_index]->{title} // '',            # Title
+#            $ol->results->[$row_index]->{author_name}->[0] // '', # Author
+#            $ol->results->[$row_index]->{isbn}->[0] // '',        # ISBN
+#            $ol->results->[$row_index]->{publisher}->[0] // '',   # Publisher
+#            $ol->results->[$row_index]->{publish_year}->[0]
+#              // '',                                              # Publish year
+#        );
+#    }
+#
+#    my $row_index = $term->readline('Which book do you want to add? ');
+#    $row_index--;
+#    if ( $row_index < 0 or $row_index > $ol->results->@* ) {
+#        say 'Invalid input. No book added.';
+#        return;
+#    }
+#
+#    my $date_read = prompt_date_read($term);
+#
+#    add_book(
+#        $table,
+#        $term,
+#        $ol->results->[$row_index]->{title} // '',
+#        $ol->results->[$row_index]->{author_name}->[0] // '',
+#        $ol->results->[$row_index]->{isbn}->[0] // '',
+#        $ol->results->[$row_index]->{publisher}->[0] // '',
+#        $ol->results->[$row_index]->{publish_year}->[0] // '',
+#        $date_read
+#    );
+#}    ## --- end sub handler_add
 #
 
