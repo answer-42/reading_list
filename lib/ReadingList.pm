@@ -33,7 +33,6 @@ use DateTime;
 use Books;
 
 has 'db_file_name' => ( is => 'ro', isa => 'Str', required => 1 );
-# has 'color'        => ( is => 'ro', isa => 'Str', default  => 'red' );
 has 'table' => ( is => 'ro', writer => '_table' );
 has 'boolean_map' =>
   ( is => 'ro', writer => '_boolean_map', isa => 'ArrayRef[Bool]' );
@@ -82,13 +81,14 @@ sub edit ( $self, $book_number, $field, $new_value ) {
 }    ## --- end sub edit
 
 sub get ( $self, $book_number ) {
-	my $book = Book->new();
-    $book->title($self->table->elm( $book_number, "Title" ));
-    $book->publisher($self->table->elm( $book_number, "Publisher" ));
-    $book->author($self->table->elm( $book_number, "Author" ));
-	return $book
-#  		"Title", "Author",
-#      "ISBN13", "Publisher", "Year Published", "Date Read";
+    my $book = Book->new(book_index => $book_number);
+    $book->title( $self->table->elm( $book_number, "Title" ) );
+    $book->publisher( $self->table->elm( $book_number, "Publisher" ) );
+    $book->author( $self->table->elm( $book_number, "Author" ) );
+    $book->isbn( $self->table->elm( $book_number, "ISBN13" ) );
+    $book->year_published( $self->table->elm( $book_number, "Year Published" ) );
+    $book->date_read( $self->table->elm( $book_number, "Date Read" ) );
+    return $book
 }    ## --- end sub get
 
 sub search ( $self, $search_term ) {
@@ -110,7 +110,7 @@ sub next ( $self, $search = 0 ) {
     }
     elsif ( $i <= $last_row ) {
         $self->_position( $i + 1 );
-        return  $self->get($i) ;
+        return $self->get($i);
     }
     else {
         return 0;
@@ -118,6 +118,7 @@ sub next ( $self, $search = 0 ) {
 }    ## --- end sub iterate
 
 sub save ($self) {
+    binmode( STDOUT, ":encoding(UTF-8)" );
     io( $self->db_file_name )->print( $self->table->csv );
 }    ## --- end sub save
 

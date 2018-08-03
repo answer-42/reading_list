@@ -1,4 +1,3 @@
-## Please see file perltidy.ERR
 #!/usr/bin/env perl
 #===============================================================================
 #
@@ -22,23 +21,17 @@
 use strict;
 use warnings;
 use utf8;
-use feature qw/say switch signatures/;
+use feature qw/say signatures/;
 no warnings qw/experimental::smartmatch experimental::signatures/;
 
 use Cwd qw/abs_path/;
 use FindBin;
 use lib abs_path("$FindBin::Bin/../lib");
 
-use Data::Table;
-# use Getopt::Std;
-use Scalar::Util 'looks_like_number';
+use Getopt::Std;
 use Term::ReadLine;
-use IO::All -utf8;
 use Config::Tiny;
 use Term::ANSIColor;
-use DateTime;
-
-use Data::Dumper;
 
 use Books;
 use ReadingList;
@@ -51,10 +44,9 @@ binmode( STDOUT, ":encoding(UTF-8)" );
 # Read from config file. Must be placed in the same folder as the script.
 my $config = Config::Tiny->read( $ENV{HOME} . '/.reading_list.ini' );
 
-my $reading_list = ReadingList->new(
-    db_file_name => $config->{all}->{csv_file},
-	#    color        => $config->{all}->{color}
-);
+my $COLOR = $config->{all}->{color};
+my $reading_list =
+  ReadingList->new( db_file_name => $config->{all}->{csv_file}, );
 
 $reading_list->load;
 
@@ -63,48 +55,56 @@ my $attribs = $term->Attribs;
 $attribs->{completion_entry_function} = $attribs->{list_completion_function};
 
 my @completion_words_list;
-$reading_list->init_interator();
-while ( my $book = $reading_list->next() ) {
+$reading_list->init_interator;
+while ( my $book = $reading_list->next ) {
     push @completion_words_list,
-      (
-        $book->{title},
-		$book->{author},
-		$book->{publisher}
-      );
+      ( $book->{title}, $book->{author}, $book->{publisher} );
 }
 
 $attribs->{completion_word} = [@completion_words_list];
 
 $term->ornaments('0');
-$term->readline("test> ");
 
-## Main
-#######
-#
-#my %opts;
-#getopts( 'saodeil:', \%opts );
-#
-#if ( $opts{s} ) {
-#    handler_show($table);
-#}
-#elsif ( $opts{a} ) {
-#    handler_add( $table, $term );
-#}
-#elsif ( $opts{o} ) {
-#    handler_ol( $table, $term );
-#}
-#elsif ( $opts{d} ) {
-#    handler_delete( $table, $term );
-#}
-#elsif ( $opts{e} ) {
-#    handler_edit( $table, $term );
-#}
-#elsif ( $opts{i} ) {
-#    handler_import_goodreads( $term, $opts{i} );
-#}
-#elsif ( $opts{l} ) {
-#    handler_look( $table, $opts{l} );
-#}
+# Main
+######
+
+my %opts;
+getopts( 'saodeil:', \%opts );
+
+if ( $opts{s} ) {
+    handler_show( $reading_list, $COLOR );
+}
+elsif ( $opts{a} ) {
+
+    #    handler_add( $table, $term );
+    say 'a';
+}
+elsif ( $opts{o} ) {
+
+    #    handler_ol( $table, $term );
+    say 'o';
+}
+elsif ( $opts{d} ) {
+
+    #    handler_delete( $table, $term );
+    say 'd';
+
+}
+elsif ( $opts{e} ) {
+
+    #    handler_edit( $table, $term );
+    say 'e';
+}
+elsif ( $opts{i} ) {
+
+    #    handler_import_goodreads( $term, $opts{i} );
+    say 'i';
+}
+elsif ( $opts{l} ) {
+
+    #    handler_look( $table, $opts{l} );
+    say 'l';
+}
 
 # Subroutines
 #############
@@ -112,13 +112,29 @@ $term->readline("test> ");
 #sub handler_look ( $table, $search_term ) {
 #    handler_show( $table->match_string( $search_term, 1, 0 ) );
 #}    ## --- end sub handler_look
-#
-#sub handler_show ($table) {
-#    foreach my $i ( 0 .. $table->lastRow ) {
-#        print_rows_table( $table, $i );
-#    }
-#}    ## --- end sub handler_show
-#
+
+sub handler_show ( $reading_list, $color = 0 ) {
+    $reading_list->init_interator;
+    while ( my $book = $reading_list->next ) {
+        print_book( $book, $color );
+    }
+}    ## --- end sub handler_show
+
+sub print_book ( $book, $color ) {
+    printf "%10.10s\t", $book->book_index + 1;    # Counter
+    print color('red bold') if $color;
+    printf "%-20.20s\t", $book->title;            # Title
+    print color('green') if $color;
+    printf "%-20.20s\t", $book->author;           # Author
+    print color('reset') if $color;
+    printf "%-13.13s\t", $book->isbn;              # ISBN
+    printf "%-20.20s\t", $book->publisher;         # Publisher
+    printf "%-4.4s\t",   $book->year_published;    # Year published
+    printf "%-10.10s\t", $book->date_read;         # Date read
+    print "\n";
+}    ## --- end sub print_row
+
+
 #sub handler_add ( $table, $term ) {
 #    my $title     = prompt_title($term);
 #    my $author    = prompt_author($term);
@@ -374,22 +390,6 @@ $term->readline("test> ");
 #        $table->elm( $row_index, "Date Read" ),
 #    );
 #}    ## --- end sub print_rows_table
-#
-#sub print_row ( $row_index, $title, $author, $isbn, $publisher, $publish_year,
-#    $date_read = '' )
-#{
-#    printf "%10.10s\t", $row_index + 1;    # Counter
-#    print color('bold red') if $COLOR;
-#    printf "%-20.20s\t", $title;           # Title
-#    print color('green') if $COLOR;
-#    printf "%-20.20s\t", $author;          # Author
-#    print color('reset') if $COLOR;
-#    printf "%-13.13s\t", $isbn;            # ISBN
-#    printf "%-20.20s\t", $publisher;       # Publisher
-#    printf "%-4.4s\t",   $publish_year;    # Year published
-#    printf "%-10.10s\t", $date_read;       # Date read
-#    print "\n";
-#}    ## --- end sub print_row
 #
 #sub change_field ( $term, $table, $row_index, $col ) {
 #    my $new_title =

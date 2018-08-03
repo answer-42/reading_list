@@ -51,6 +51,7 @@ coerce 'ISBN',
 
 has 'title'  => ( is  => 'rw',   default => '' );
 has 'author' => ( is  => 'rw',   default => '' );
+has 'book_index' => (is => 'rw', isa => 'Int', required => 1);
 has 'isbn'   => ( isa => 'ISBN', is      => 'rw', coerce => 1, default => '' );
 has 'publisher' => (
     is      => 'rw',
@@ -119,7 +120,7 @@ sub _is_isbn_13 ($isbn) {
     my @isbn = split '', $isbn;
 
     return 1 if $isbn eq '';
-    return 0 unless looks_like_number($isbn);
+	return 0 unless looks_like_number($isbn);
 
     # Retrieve checksum and check length (13 digits)
     return 0
