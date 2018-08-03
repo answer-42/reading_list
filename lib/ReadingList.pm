@@ -76,12 +76,13 @@ sub delete ( $self, $book_index ) {
 }    ## --- end sub delete
 
 sub edit ( $self, $book_index, $book ) {
-	$self->table->setElm($book_index, "Title", $book->title);
-	$self->table->setElm($book_index, "Author", $book->author);
-	$self->table->setElm($book_index, "ISBN13", $book->isbn);
-	$self->table->setElm($book_index, "Publisher", $book->publisher);
-	$self->table->setElm($book_index, "Year Published", $book->year_published);
-	$self->table->setElm($book_index, "Date Read", $book->date_read);
+    $self->table->setElm( $book_index, "Title",     $book->title );
+    $self->table->setElm( $book_index, "Author",    $book->author );
+    $self->table->setElm( $book_index, "ISBN13",    $book->isbn );
+    $self->table->setElm( $book_index, "Publisher", $book->publisher );
+    $self->table->setElm( $book_index, "Year Published",
+        $book->year_published );
+    $self->table->setElm( $book_index, "Date Read", $book->date_read );
 }    ## --- end sub edit
 
 sub get ( $self, $book_index ) {

@@ -13,7 +13,7 @@
 #        NOTES: ---
 #       AUTHOR: Sebastian Benque (SWRB), sebastian.benque@gmail.com
 # ORGANIZATION:
-#      VERSION: 1.1
+#      VERSION: 1.2 
 #      CREATED: 06/09/2018 08:24:22 AM
 #     REVISION: ---
 #===============================================================================
@@ -97,19 +97,20 @@ elsif ( $opts{e} ) {
     handler_edit( $reading_list, $opts{e}, $term );
 }
 elsif ( $opts{i} ) {
+
     #    handler_import_goodreads( $term, $opts{i} );
     say 'i';
 }
 elsif ( $opts{l} ) {
-    handler_look( $reading_list, $opts{l}, $COLOR);
+    handler_look( $reading_list, $opts{l}, $COLOR );
 }
 
 # Subroutines
 #############
 
 sub handler_look ( $reading_list, $search_term, $color ) {
-	$reading_list->search($search_term);
-	$reading_list->init_interator;
+    $reading_list->search($search_term);
+    $reading_list->init_interator;
     while ( my $book = $reading_list->next(1) ) {
         print_book( $book, $color );
     }
@@ -180,11 +181,11 @@ sub handler_delete ( $reading_list, $term ) {
       $term->readline("Which book do you want to delete? (Insert id) ");
     $book_index--;    # Book number to index.
 
-	# Book index in range
-	unless ($reading_list->is_valid_book_index($book_index)) {
-		say "Book number not in range." ;
-		return
-	}
+    # Book index in range
+    unless ( $reading_list->is_valid_book_index($book_index) ) {
+        say "Book number not in range.";
+        return;
+    }
 
     # Show book to delete
     print_book( $reading_list->get($book_index) );
@@ -203,48 +204,56 @@ sub validate_save_changes ( $reading_list, $term ) {
         say "Changes were not saved.";
     }
 }    ## --- end sub validate_save_changes
+
 sub handler_edit ( $reading_list, $book_index, $term ) {
     $book_index--;    # Book number to index.
- 	# Book index in range
-	unless ($reading_list->is_valid_book_index($book_index)) {
-		say "Book number not in range." ;
-		return
-	}
+                      # Book index in range
+    unless ( $reading_list->is_valid_book_index($book_index) ) {
+        say "Book number not in range.";
+        return;
+    }
 
-	my $book = $reading_list->get($book_index);
+    my $book = $reading_list->get($book_index);
     my $input;
     do {
-    	print_book( $book );
+        print_book($book);
         my $input = $term->readline(
-            "Change [t]itle, [a]uthor, [i]sbn, [p]ublisher, publication [y]ear or [d]ate read? To stop editing press q. "
+"Change [t]itle, [a]uthor, [i]sbn, [p]ublisher, publication [y]ear or [d]ate read? To stop editing press q. "
         );
 
-        if ($input eq 't') {
-	  		$book->title($term->readline( "Edit Title: ", $book->title ));
-            }
-            elsif ($input eq 'a') {
-	  		$book->author($term->readline( "Edit Author: ", $book->author ));
-            }
-            elsif ($input eq 'i') {
-	  		$book->isbn($term->readline( "Edit ISBN: ", $book->isbn ));
-            }
-            elsif ($input eq 'p') {
-	  		$book->publisher($term->readline( "Edit Publisher: ", $book->publisher ));
-            }
-            elsif ($input eq 'y') {
-	  		$book->year_published($term->readline( "Edit Year Published: ", $book->year_published ));
-            }
-            elsif ($input eq 'd') {
-	  		$book->date_read($term->readline( "Edit Publisher: ", $book->date_read ));
-            }
-            elsif ($input eq 'q') {
-				$reading_list->edit($book_index, $book);
-				validate_save_changes($reading_list, $term);
-				return
-            }
-			else {
-                say "No valid input";
-            }
+        if ( $input eq 't' ) {
+            $book->title( $term->readline( "Edit Title: ", $book->title ) );
+        }
+        elsif ( $input eq 'a' ) {
+            $book->author( $term->readline( "Edit Author: ", $book->author ) );
+        }
+        elsif ( $input eq 'i' ) {
+            $book->isbn( $term->readline( "Edit ISBN: ", $book->isbn ) );
+        }
+        elsif ( $input eq 'p' ) {
+            $book->publisher(
+                $term->readline( "Edit Publisher: ", $book->publisher ) );
+        }
+        elsif ( $input eq 'y' ) {
+            $book->year_published(
+                $term->readline(
+                    "Edit Year Published: ",
+                    $book->year_published
+                )
+            );
+        }
+        elsif ( $input eq 'd' ) {
+            $book->date_read(
+                $term->readline( "Edit Publisher: ", $book->date_read ) );
+        }
+        elsif ( $input eq 'q' ) {
+            $reading_list->edit( $book_index, $book );
+            validate_save_changes( $reading_list, $term );
+            return;
+        }
+        else {
+            say "No valid input";
+        }
     } while (1);
 }    ## --- end sub handler_edit
 
@@ -314,8 +323,6 @@ sub handler_edit ( $reading_list, $book_index, $term ) {
 ##   PARAMETERS: isbn (integer)
 ##      RETURNS: boolean
 ##===============================================================================
-
-
 
 #sub handler_ol ( $table, $term ) {
 #    my $ol = API::OpenLibrary::Search->new();
