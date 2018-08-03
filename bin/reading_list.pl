@@ -103,17 +103,19 @@ elsif ( $opts{i} ) {
     say 'i';
 }
 elsif ( $opts{l} ) {
-
-    #    handler_look( $table, $opts{l} );
-    say 'l';
+    handler_look( $reading_list, $opts{l}, $COLOR);
 }
 
 # Subroutines
 #############
 
-#sub handler_look ( $table, $search_term ) {
-#    handler_show( $table->match_string( $search_term, 1, 0 ) );
-#}    ## --- end sub handler_look
+sub handler_look ( $reading_list, $search_term, $color ) {
+	$reading_list->search($search_term);
+	$reading_list->init_interator;
+    while ( my $book = $reading_list->next(1) ) {
+        print_book( $book, $color );
+    }
+}    ## --- end sub handler_look
 
 sub handler_show ( $reading_list, $color = 1 ) {
     $reading_list->init_interator;
@@ -122,7 +124,7 @@ sub handler_show ( $reading_list, $color = 1 ) {
     }
 }    ## --- end sub handler_show
 
-sub print_book ( $book, $color=1 ) {
+sub print_book ( $book, $color = 1 ) {
     printf "%10.10s\t", $book->book_index + 1;    # Counter
     print color('red bold') if $color;
     printf "%-20.20s\t", $book->title;            # Title
@@ -138,17 +140,17 @@ sub print_book ( $book, $color=1 ) {
 
 sub handler_add ( $reading_list, $term ) {
     my $book = Books->new;
-    $book->title(prompt_title($term));
-    $book->author(prompt_author($term));
-    $book->isbn(prompt_isbn($term));
-    $book->publisher(prompt_publisher($term));
-    $book->year_published(prompt_pub_year($term));
-    $book->date_read(prompt_date_read($term));
+    $book->title( prompt_title($term) );
+    $book->author( prompt_author($term) );
+    $book->isbn( prompt_isbn($term) );
+    $book->publisher( prompt_publisher($term) );
+    $book->year_published( prompt_pub_year($term) );
+    $book->date_read( prompt_date_read($term) );
 
     $reading_list->add($book);
-	
-	print_book($book);
-	validate_save_changes($reading_list, $term);
+
+    print_book($book);
+    validate_save_changes( $reading_list, $term );
 }    ## --- end sub handler_add
 
 sub prompt_title ($term) {
@@ -179,26 +181,30 @@ sub handler_delete ( $reading_list, $term ) {
     my $book_index =
       $term->readline("Which book do you want to delete? (Insert id) ");
     $book_index--;    # Book number to index.
-	#TODO: check input 
-	
-	# Show book to delete
-	print_book($reading_list->get($book_index) );
 
-	$reading_list->delete($book_index);
-	validate_save_changes($reading_list, $term);
+	# Book index in range
+	unless ($reading_list->is_valid_book_index($book_index)) {
+		say "Book number not in range." ;
+		return
+	}
+
+    # Show book to delete
+    print_book( $reading_list->get($book_index) );
+
+    $reading_list->delete($book_index);
+    validate_save_changes( $reading_list, $term );
 }    ## --- end sub handler_delete
 
-sub validate_save_changes ($reading_list, $term) {
+sub validate_save_changes ( $reading_list, $term ) {
     my $validation =
       $term->readline("Are you sure you want to save the changes? (y/n) ");
     if ( $validation eq 'y' ) {
-		$reading_list->save;
+        $reading_list->save;
     }
     else {
         say "Changes were not saved.";
     }
-
-} ## --- end sub validate_save_changes
+}    ## --- end sub validate_save_changes
 
 #sub handler_ol ( $table, $term ) {
 #    my $ol = API::OpenLibrary::Search->new();
@@ -388,44 +394,7 @@ sub validate_save_changes ($reading_list, $term) {
 ##   PARAMETERS: isbn (integer)
 ##      RETURNS: boolean
 ##===============================================================================
-#sub check_isbn ($isbn) {
-#    my @isbn = split '', $isbn;
-#
-#    return 1 if $isbn eq '-';
-#    return 0 unless looks_like_number($isbn);
-#
-#    # Retrieve checksum and check length (13 digits)
-#    return 0
-#      unless my ($check) = $isbn =~ /^\d{12}(\d)$/;
-#
-#    # Calculate checksum
-#    my $sum = 0;
-#    for ( 1 .. 12 ) {
-#        if ( $_ % 2 == 1 ) {
-#            $sum += $isbn[ $_ - 1 ];
-#        }
-#        else {
-#            $sum += 3 * $isbn[ $_ - 1 ];
-#        }
-#    }
-#
-#    # Check if checksum corresponds with calculated checksum
-#    return 1 if ( 10 - ( $sum % 10 ) ) == $check;
-#    return 0;
-#}    ## --- end sub check_isbn
-#
-#sub print_rows_table ( $table, $row_index ) {
-#    print_row(
-#        $row_index,
-#        $table->elm( $row_index, "Title" ),
-#        $table->elm( $row_index, "Author" ),
-#        $table->elm( $row_index, "ISBN13" ),
-#        $table->elm( $row_index, "Publisher" ),
-#        $table->elm( $row_index, "Year Published" ),
-#        $table->elm( $row_index, "Date Read" ),
-#    );
-#}    ## --- end sub print_rows_table
-#
+
 #sub change_field ( $term, $table, $row_index, $col ) {
 #    my $new_title =
 #      $term->readline( "Edit " . $col . ": ", $table->elm( $row_index, $col ) );
@@ -433,40 +402,5 @@ sub validate_save_changes ($reading_list, $term) {
 #
 #    return $table;
 #}    ## --- end sub change_field
-#
-#sub check_date ($date) {
-#    my ( $year, $month, $day ) = $date =~ /(\d\d\d\d)\/(\d\d)\/(\d\d)/;
-#
-#    return 1 if $date eq '-';
-#    return 1 if $year and $month and $day and $month <= 12 and $day <= 31;
-#    return 0;
-#}    ## --- end sub check_date
-#
-#sub add_book ( $table, $term, $title, $author, $isbn, $publisher, $pub_year,
-#    $date_read )
-#{
-#    print_row( 0, $title, $author, $isbn, $publisher, $pub_year, $date_read );
-#
-#    my $validation = $term->readline('Do you want to add this book? (y/n)');
-#    if ( $validation eq 'y' ) {
-#        $table->addRow(
-#            {
-#                "Title"          => $title,
-#                "Author"         => $author,
-#                "ISBN13"         => $isbn,
-#                "Publisher"      => $publisher,
-#                "Year Published" => $pub_year,
-#                "Date Read"      => $date_read
-#            },
-#            0
-#        );
-#        io($DB_FILE_NAME)->print( $table->csv );
-#    }
-#    else {
-#        say "Book was not added";
-#    }
-#
-#    return;
-#}    ## --- end sub add_book
 #
 

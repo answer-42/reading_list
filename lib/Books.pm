@@ -18,12 +18,10 @@ package Books;
 
 # Checking only if values are set with the setter functions and not with the constructor.
 
-use Moose;
-use Moose::Util::TypeConstraints;
+use Moo;
 
 use namespace::autoclean;
 use utf8;
-
 
 use feature qw(say signatures);
 no warnings qw/experimental::signatures recursion/;
@@ -31,42 +29,23 @@ no warnings qw/experimental::signatures recursion/;
 use Date::Manip::Date;
 use Scalar::Util 'looks_like_number';
 
-use Data::Dumper;
-
-subtype 'YearPublished' => as 'Str' => where { _is_year($_) } =>
-  message { 'Year published should be a valid date: ' . Dumper($_) };
-coerce 'YearPublished',
-  from 'Num', via { _coerce_publish_year($_) },
-  from 'Str', via { _coerce_publish_year($_) };
-
-subtype 'DateRead' => as 'Str' => where { _is_date($_) } =>
-  message { 'Date read should be a valid date: ' . Dumper($_) };
-coerce 'DateRead', from 'Str', via { _coerce_date_read($_) };
-
-subtype 'ISBN' => as 'Str' => where { _is_isbn($_) } =>
-  message { 'ISBN should be a valid date: ' . Dumper($_) };
-coerce 'ISBN',
-  from 'Num', via { _coerce_isbn($_) },
-  from 'Str', via { _coerce_isbn($_) };
-
-has 'title'  => ( is  => 'rw',   default => '' );
-has 'author' => ( is  => 'rw',   default => '' );
-has 'book_index' => (is => 'rw', isa => 'Int');
-has 'isbn'   => ( isa => 'ISBN', is      => 'rw', coerce => 1, default => '' );
+has 'title'  => ( is => 'rw', default => '' );
+has 'author' => ( is => 'rw', default => '' );
+has 'book_index' => ( is => 'rw', default => 0 );
+has 'isbn' =>
+  ( is => 'rw', default => '', coerce => sub { _coerce_isbn( $_[0] ) } );
 has 'publisher' => (
     is      => 'rw',
     default => '',
 );
 has 'year_published' => (
-    isa     => 'YearPublished',
     is      => 'rw',
-    coerce  => 1,
+    coerce  => sub { _coerce_publish_year( $_[0] ) },
     default => '',
 );
 has 'date_read' => (
-    isa     => 'DateRead',
     is      => 'rw',
-    coerce  => 1,
+    coerce  => sub { _coerce_date_read( $_[0] ) },
     default => '',
 );
 
@@ -105,7 +84,7 @@ sub _coerce_date_read ($date_read) {
     my $date = Date::Manip::Date->new;
     $date->config( DateFormat => 'UK' );
 
-    $date->parse_date($date_read) ? '' : $date->printf("%Y/%m/%D");
+    $date->parse_date($date_read) ? '' : $date->printf("%Y/%m/%d");
 }    ## --- sub _coerce_date_read
 
 sub _coerce_isbn ($isbn) {
@@ -120,7 +99,7 @@ sub _is_isbn_13 ($isbn) {
     my @isbn = split '', $isbn;
 
     return 1 if $isbn eq '';
-	return 0 unless looks_like_number($isbn);
+    return 0 unless looks_like_number($isbn);
 
     # Retrieve checksum and check length (13 digits)
     return 0
@@ -144,6 +123,7 @@ sub _is_isbn_13 ($isbn) {
 
 sub _is_isbn_10 ($isbn) {
     0
+
       # TODO
 }    ## --- end sub _is_isbn_10
 

@@ -20,7 +20,7 @@ use Moo;
 use namespace::autoclean;
 use utf8;
 
-use feature qw(say signatures);
+use feature qw/signatures/;
 no warnings qw/experimental::signatures recursion/;
 
 use FindBin;
@@ -28,7 +28,8 @@ use lib $FindBin::Bin;
 
 use Data::Table;
 use IO::All -utf8;
-use API::OpenLibrary::Search;
+
+# use API::OpenLibrary::Search;
 use DateTime;
 use Books;
 
@@ -114,6 +115,13 @@ sub next ( $self, $search = 0 ) {
         return 0;
     }
 }    ## --- end sub iterate
+
+sub is_valid_book_index ( $self, $book_index ) {
+    if ( $book_index < 0 or $book_index > $self->table->lastRow ) {
+        return 0;
+    }
+    else { return 1 }
+}    ## --- end sub is_valid_book_index
 
 sub save ($self) {
     binmode( STDOUT, ":encoding(UTF-8)" );
