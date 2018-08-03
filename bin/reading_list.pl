@@ -64,19 +64,19 @@ $attribs->{completion_entry_function} = $attribs->{list_completion_function};
 
 my @completion_words_list;
 $reading_list->init_interator();
-while (my $book = $reading_list->next() ) {
+while ( my $book = $reading_list->next() ) {
     push @completion_words_list,
       (
-        $book->title,
-		$book->author,
-		$book->publisher
+        $book->{title},
+		$book->{author},
+		$book->{publisher}
       );
 }
 
 $attribs->{completion_word} = [@completion_words_list];
 
 $term->ornaments('0');
-$term->prompt("test> ");
+$term->readline("test> ");
 
 ## Main
 #######

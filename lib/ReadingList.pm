@@ -82,8 +82,13 @@ sub edit ( $self, $book_number, $field, $new_value ) {
 }    ## --- end sub edit
 
 sub get ( $self, $book_number ) {
-    return map { $self->table->elm( $book_number, $_ ) } "Title", "Author",
-      "ISBN13", "Publisher", "Year Published", "Date Read";
+	my $book = Book->new();
+    $book->title($self->table->elm( $book_number, "Title" ));
+    $book->publisher($self->table->elm( $book_number, "Publisher" ));
+    $book->author($self->table->elm( $book_number, "Author" ));
+	return $book
+#  		"Title", "Author",
+#      "ISBN13", "Publisher", "Year Published", "Date Read";
 }    ## --- end sub get
 
 sub search ( $self, $search_term ) {
@@ -105,7 +110,7 @@ sub next ( $self, $search = 0 ) {
     }
     elsif ( $i <= $last_row ) {
         $self->_position( $i + 1 );
-        return [ $self->get($i) ];
+        return  $self->get($i) ;
     }
     else {
         return 0;
